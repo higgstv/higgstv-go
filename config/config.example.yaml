@@ -1,0 +1,19 @@
+server:
+  port: "8080"
+  env: "development"  # development, production
+
+database:
+  uri: "mongodb://localhost:27017"
+  database: "higgstv"
+
+session:
+  secret: "change-me-in-production-please-use-a-strong-random-string"
+
+mail:
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 587
+  smtp_user: "your-email@gmail.com"
+  smtp_password: "your-app-password"
+  from: "HiggsTV <no-reply@higgstv.com>"
+  base_url: "http://localhost:8080"
+
