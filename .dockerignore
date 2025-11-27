@@ -1,0 +1,13 @@
+bin/
+tests/
+.git/
+.gitignore
+*.md
+Dockerfile
+docker-compose.yml
+.dockerignore
+.golangci.yml
+Makefile
+coverage.out
+coverage.html
+

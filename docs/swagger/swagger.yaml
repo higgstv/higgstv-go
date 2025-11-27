@@ -1,0 +1,761 @@
+basePath: /
+definitions:
+  handlers.AddChannelRequest:
+    properties:
+      name:
+        description: 頻道名稱
+        example: 我的頻道
+        type: string
+      tags:
+        description: 標籤列表
+        items:
+          type: integer
+        type: array
+    required:
+    - name
+    type: object
+  handlers.AddProgramRequest:
+    properties:
+      ch:
+        description: 頻道 ID
+        example: channel_id
+        type: string
+      desc:
+        description: 節目描述
+        example: 節目描述
+        type: string
+      duration:
+        description: 時長（秒）
+        example: 300
+        type: integer
+      name:
+        description: 節目名稱
+        example: 節目名稱
+        type: string
+      tags:
+        description: 標籤列表
+        items:
+          type: integer
+        type: array
+      updateCover:
+        description: 是否更新頻道封面
+        example: false
+        type: boolean
+      youtube_id:
+        description: YouTube 影片 ID
+        example: dQw4w9WgXcQ
+        type: string
+    required:
+    - ch
+    - name
+    - youtube_id
+    type: object
+  handlers.ChangePasswordRequest:
+    properties:
+      new_password:
+        type: string
+      password:
+        type: string
+    required:
+    - new_password
+    - password
+    type: object
+  handlers.DeleteProgramRequest:
+    properties:
+      ch:
+        type: string
+      ids:
+        items:
+          type: integer
+        type: array
+    required:
+    - ch
+    - ids
+    type: object
+  handlers.ForgetPasswordRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  handlers.MoveProgramRequest:
+    properties:
+      ch:
+        type: string
+      ids:
+        items:
+          type: integer
+        type: array
+      target:
+        type: string
+    required:
+    - ch
+    - ids
+    - target
+    type: object
+  handlers.ResetPasswordRequest:
+    properties:
+      access_key:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - access_key
+    - email
+    - password
+    type: object
+  handlers.SaveChannelRequest:
+    properties:
+      desc:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      tags:
+        items:
+          type: integer
+        type: array
+    required:
+    - id
+    - name
+    type: object
+  handlers.SaveProgramOrderRequest:
+    properties:
+      ch:
+        type: string
+      order:
+        items:
+          type: integer
+        type: array
+    required:
+    - ch
+    - order
+    type: object
+  handlers.SaveProgramRequest:
+    properties:
+      ch:
+        type: string
+      desc:
+        type: string
+      duration:
+        type: integer
+      name:
+        type: string
+      prog_id:
+        type: integer
+      tags:
+        items:
+          type: integer
+        type: array
+      updateCover:
+        type: boolean
+      youtube_id:
+        type: string
+    required:
+    - ch
+    - name
+    - prog_id
+    - youtube_id
+    type: object
+  handlers.SetChannelOwnerRequest:
+    properties:
+      c:
+        description: 頻道 ID（歷史遺留參數，與 id 相同）
+        type: string
+      email:
+        description: 要新增為共用者的使用者 Email（優先使用）
+        type: string
+      id:
+        description: 頻道 ID
+        type: string
+      owners:
+        description: 要新增的使用者 ID 陣列（向後相容）
+        items:
+          type: string
+        type: array
+    required:
+    - id
+    type: object
+  handlers.SignInRequest:
+    properties:
+      password:
+        description: 密碼
+        example: password123
+        type: string
+      username:
+        description: 使用者名稱
+        example: testuser
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handlers.SignUpRequest:
+    properties:
+      email:
+        description: 電子郵件
+        example: test@example.com
+        type: string
+      invitation_code:
+        description: 邀請碼
+        example: sixpens
+        type: string
+      password:
+        description: 密碼
+        example: password123
+        type: string
+      username:
+        description: 使用者名稱
+        example: testuser
+        type: string
+    required:
+    - email
+    - invitation_code
+    - password
+    - username
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@higgstv.com
+    name: API Support
+    url: http://www.higgstv.com
+  description: Session-based authentication
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: HiggsTV API Server
+  version: "1.0"
+paths:
+  /apis/addchannel:
+    post:
+      consumes:
+      - application/json
+      description: 建立新頻道（需要登入）
+      parameters:
+      - description: 新增頻道請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AddChannelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 需要登入" example({"state":1,"code":1})
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiAuth: []
+      summary: 新增頻道
+      tags:
+      - 頻道
+  /apis/addprog:
+    post:
+      consumes:
+      - application/json
+      description: 在頻道中新增節目（需要登入且為頻道管理員）
+      parameters:
+      - description: 新增節目請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AddProgramRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 需要登入或權限不足" example({"state":1,"code":2})
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiAuth: []
+      summary: 新增節目
+      tags:
+      - 節目
+  /apis/change_password:
+    post:
+      consumes:
+      - application/json
+      description: 修改密碼（需登入）
+      parameters:
+      - description: 變更密碼請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 缺少欄位" example({"state":1,"code":0})
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiAuth: []
+      summary: 變更密碼
+      tags:
+      - 認證
+  /apis/delprog:
+    post:
+      consumes:
+      - application/json
+      description: 刪除節目（可一次刪除多個，需登入，需有權限）
+      parameters:
+      - description: 刪除節目請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DeleteProgramRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 權限不足" example({"state":1,"code":2})
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiAuth: []
+      summary: 刪除節目
+      tags:
+      - 節目
+  /apis/forget_password:
+    post:
+      consumes:
+      - application/json
+      description: 請求寄送重設密碼郵件。無論 Email 是否存在，都回成功（安全設計）
+      parameters:
+      - description: 忘記密碼請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ForgetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 缺少欄位" example({"state":1,"code":0})
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 忘記密碼
+      tags:
+      - 認證
+  /apis/getchannel/{id}:
+    get:
+      description: 根據頻道 ID 取得頻道詳細資訊
+      parameters:
+      - description: 頻道 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 頻道不存在" example({"state":1,"code":2})
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 取得單一頻道
+      tags:
+      - 頻道
+  /apis/getchannelinfo/{id}:
+    get:
+      description: 取得頻道詳細資訊，包含擁有者基本資訊
+      parameters:
+      - description: 頻道 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 頻道不存在" example({"state":1,"code":2})
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 取得頻道資訊（含擁有者）
+      tags:
+      - 頻道
+  /apis/getchannels:
+    get:
+      description: 取得公開頻道列表，支援過濾和排序
+      parameters:
+      - description: 只列出特定使用者的頻道（username）
+        in: query
+        name: user
+        type: string
+      - description: 以名稱模糊搜尋
+        in: query
+        name: q
+        type: string
+      - description: 是否只顯示有節目的頻道（0/1）
+        in: query
+        name: has_contents
+        type: string
+      - collectionFormat: csv
+        description: 要排除的頻道類型陣列
+        in: query
+        items:
+          type: string
+        name: ignore_types
+        type: array
+      - description: 排序欄位（例如：last_modified, name）
+        in: query
+        name: sort
+        type: string
+      - description: 是否遞減排序（0/1）
+        in: query
+        name: desc
+        type: string
+      - description: 分頁起始 index
+        in: query
+        name: start
+        type: integer
+      - description: 限制筆數
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功回應
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 取得頻道列表
+      tags:
+      - 頻道
+  /apis/getownchannels:
+    get:
+      description: 取得當前登入使用者擁有的所有頻道（需要登入），支援 q 和 types[] 過濾
+      parameters:
+      - description: 關鍵字搜尋（頻道名稱）
+        in: query
+        name: q
+        type: string
+      - collectionFormat: csv
+        description: 頻道類型陣列（例如：default,unclassified）
+        in: query
+        items:
+          type: string
+        name: types
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 需要登入" example({"state":1,"code":1})
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiAuth: []
+      summary: 取得自己的頻道列表
+      tags:
+      - 頻道
+  /apis/pickprog:
+    get:
+      description: 透過 Bookmarklet 新增 YouTube 影片到未分類頻道（支援 JSONP），同時支援 youtube_id 和
+        url 參數
+      parameters:
+      - description: JSONP callback 函數名
+        in: query
+        name: callback
+        type: string
+      - description: 影片名稱
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: YouTube 影片 ID（文件規範）
+        in: query
+        name: youtube_id
+        type: string
+      - description: YouTube URL（向後相容，與 youtube_id 二選一）
+        in: query
+        name: url
+        type: string
+      - description: 描述
+        in: query
+        name: desc
+        type: string
+      - description: 時長（秒）
+        in: query
+        name: duration
+        type: integer
+      - description: 標籤（逗號分隔的數字）
+        in: query
+        name: tags
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 需要登入或參數無效
+      security:
+      - ApiAuth: []
+      summary: Pick 節目（Bookmarklet）
+      tags:
+      - 節目
+  /apis/prog/saveorder:
+    post:
+      consumes:
+      - application/json
+      description: 儲存節目在頻道中的自訂排序（需登入，需有權限）
+      parameters:
+      - description: 儲存節目順序請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SaveProgramOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 權限不足" example({"state":1,"code":2})
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiAuth: []
+      summary: 儲存節目順序
+      tags:
+      - 節目
+  /apis/progmoveto:
+    post:
+      consumes:
+      - application/json
+      description: 將節目從一個頻道搬到另一個頻道（需登入，需有來源和目標頻道權限）
+      parameters:
+      - description: 移動節目請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.MoveProgramRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 權限不足" example({"state":1,"code":2})
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiAuth: []
+      summary: 移動節目
+      tags:
+      - 節目
+  /apis/reset_password:
+    post:
+      consumes:
+      - application/json
+      description: 使用 access_key 重設密碼（不需要登入）
+      parameters:
+      - description: 重設密碼請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 缺少欄位" example({"state":1,"code":0})
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 重設密碼
+      tags:
+      - 認證
+  /apis/savechannel:
+    post:
+      consumes:
+      - application/json
+      description: 更新頻道名稱、描述和標籤（需登入，需有權限）
+      parameters:
+      - description: 儲存頻道請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SaveChannelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 權限不足" example({"state":1,"code":2})
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiAuth: []
+      summary: 儲存頻道
+      tags:
+      - 頻道
+  /apis/saveprog:
+    post:
+      consumes:
+      - application/json
+      description: 更新節目內容（需登入，需有權限）
+      parameters:
+      - description: 儲存節目請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SaveProgramRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 權限不足" example({"state":1,"code":2})
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiAuth: []
+      summary: 儲存節目
+      tags:
+      - 節目
+  /apis/setchannelowner:
+    post:
+      consumes:
+      - application/json
+      description: 新增共用者，呼叫者需為 admin（優先使用 email 參數）
+      parameters:
+      - description: 設定頻道擁有者請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SetChannelOwnerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 權限不足" example({"state":1,"code":2})
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiAuth: []
+      summary: 設定頻道擁有者
+      tags:
+      - 頻道
+  /apis/signin:
+    post:
+      consumes:
+      - application/json
+      description: 使用者登入，成功後會設定 Session Cookie
+      parameters:
+      - description: 登入請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SignInRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 失敗回應" example({"state":0,"ret":false})
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 登入
+      tags:
+      - 認證
+  /apis/signout:
+    get:
+      description: 使用者登出，清除 Session。可選的 redirect 參數會執行 HTTP redirect
+      parameters:
+      - description: 重定向 URL（選填）
+        in: query
+        name: redirect
+        type: string
+      responses:
+        "200":
+          description: 成功回應（無 redirect 時）" example({"state":0})
+          schema:
+            additionalProperties: true
+            type: object
+        "302":
+          description: 重定向到指定 URL 或首頁
+      summary: 登出
+      tags:
+      - 認證
+  /apis/signup:
+    post:
+      consumes:
+      - application/json
+      description: 新使用者註冊，需要有效的邀請碼
+      parameters:
+      - description: 註冊請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SignUpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 失敗回應" example({"state":1,"code":2})
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 註冊
+      tags:
+      - 認證
+  /health:
+    get:
+      description: 檢查伺服器和資料庫連線狀態
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 服務正常
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 健康檢查
+      tags:
+      - 系統
+  /ready:
+    get:
+      description: 檢查服務是否準備好接受請求（包含資料庫查詢測試）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 服務就緒
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 就緒檢查
+      tags:
+      - 系統
+swagger: "2.0"
