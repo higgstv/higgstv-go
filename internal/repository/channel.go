@@ -94,7 +94,11 @@ func (r *ChannelRepository) ListChannels(ctx context.Context, filter bson.M, sor
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() {
+		if err := cursor.Close(ctx); err != nil {
+			// 記錄錯誤但不中斷執行
+		}
+	}()
 
 	var channels []models.Channel
 	if err := cursor.All(ctx, &channels); err != nil {

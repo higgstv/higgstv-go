@@ -87,7 +87,10 @@ func PickProgram(db *mongo.Database) gin.HandlerFunc {
 			unclassifiedChannelID = unclassifiedChannel.ID
 
 			// 更新 session
-			session.SetUnclassifiedChannel(c, unclassifiedChannelID)
+			if err := session.SetUnclassifiedChannel(c, unclassifiedChannelID); err != nil {
+				response.JSONPError(c, req.Callback, response.ErrorServerError)
+				return
+			}
 		}
 
 		// 取得 YouTube ID（優先使用 youtube_id，否則從 url 提取）

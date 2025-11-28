@@ -12,7 +12,9 @@ import (
 type ChannelType string
 
 const (
+	// ChannelTypeDefault 預設頻道類型
 	ChannelTypeDefault      ChannelType = "default"
+	// ChannelTypeUnclassified 未分類頻道類型
 	ChannelTypeUnclassified ChannelType = "unclassified"
 )
 

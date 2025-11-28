@@ -4,7 +4,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// APIVersion API 版本號
 const APIVersion = "v1"
+
+// APIVersionHeader API 版本 Header 名稱
 const APIVersionHeader = "X-API-Version"
 
 // APIVersionMiddleware API 版本中介層

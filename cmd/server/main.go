@@ -67,7 +67,11 @@ func main() {
 	if err := logger.Init(cfg.Server.Env); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
-	defer logger.Logger.Sync()
+	defer func() {
+		if err := logger.Logger.Sync(); err != nil {
+			log.Printf("Failed to sync logger: %v", err)
+		}
+	}()
 
 	logger.Logger.Info("Starting HiggsTV API Server",
 		zap.String("env", cfg.Server.Env),
