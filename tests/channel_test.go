@@ -60,7 +60,7 @@ func TestGetChannel(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
@@ -156,7 +156,7 @@ func TestGetChannelInfo(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response["state"])
 
@@ -257,7 +257,7 @@ func TestSaveChannel(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
@@ -268,7 +268,7 @@ func TestSaveChannel(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &channelResponse)
+	err := json.Unmarshal(w.Body.Bytes(), &channelResponse)
 	require.NoError(t, err)
 
 	channelResponseData, ok := channelResponse["Data"]
@@ -641,7 +641,7 @@ func TestSetChannelOwnerWithEmail(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
