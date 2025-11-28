@@ -225,7 +225,7 @@ func TestChangePassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 	assert.Equal(t, false, response["ret"])
@@ -245,7 +245,7 @@ func TestChangePassword(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w3.Code)
 
 	var response3 map[string]interface{}
-	err := json.Unmarshal(w3.Body.Bytes(), &response3)
+	err = json.Unmarshal(w3.Body.Bytes(), &response3)
 	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response3["state"])
 	// 檢查 code 欄位（可能不存在，因為錯誤處理可能不同）
@@ -270,7 +270,7 @@ func TestChangePassword(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w4.Code)
 
 	var response4 map[string]interface{}
-	err := json.Unmarshal(w4.Body.Bytes(), &response4)
+	err = json.Unmarshal(w4.Body.Bytes(), &response4)
 	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response4["state"])
 	assert.Equal(t, float64(0), response4["code"]) // RequiredField
@@ -314,7 +314,7 @@ func TestForgetPassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	// 即使 Email 不存在，也應該回成功（安全設計）
 	assert.Equal(t, float64(0), response["state"])
@@ -331,7 +331,7 @@ func TestForgetPassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response["state"])
 	assert.Equal(t, float64(0), response["code"]) // RequiredField
@@ -348,7 +348,7 @@ func TestForgetPassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response["state"])
 	assert.Equal(t, float64(0), response["code"]) // RequiredField (驗證失敗)
@@ -439,7 +439,7 @@ func TestResetPassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 	assert.Equal(t, false, response["ret"])
