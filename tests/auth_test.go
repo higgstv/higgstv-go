@@ -89,7 +89,8 @@ func TestSignIn(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 	assert.Equal(t, true, response["ret"])
 }
@@ -126,7 +127,8 @@ func TestSignInInvalidPassword(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 	assert.Equal(t, false, response["ret"])
 }
@@ -202,7 +204,8 @@ func TestChangePassword(t *testing.T) {
 	testRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 	assert.Equal(t, true, response["ret"])
 
@@ -222,7 +225,8 @@ func TestChangePassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 	assert.Equal(t, false, response["ret"])
 
@@ -241,7 +245,8 @@ func TestChangePassword(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w3.Code)
 
 	var response3 map[string]interface{}
-	json.Unmarshal(w3.Body.Bytes(), &response3)
+	err := json.Unmarshal(w3.Body.Bytes(), &response3)
+	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response3["state"])
 	// 檢查 code 欄位（可能不存在，因為錯誤處理可能不同）
 	if code, ok := response3["code"]; ok {
@@ -265,7 +270,8 @@ func TestChangePassword(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w4.Code)
 
 	var response4 map[string]interface{}
-	json.Unmarshal(w4.Body.Bytes(), &response4)
+	err := json.Unmarshal(w4.Body.Bytes(), &response4)
+	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response4["state"])
 	assert.Equal(t, float64(0), response4["code"]) // RequiredField
 }
@@ -308,7 +314,8 @@ func TestForgetPassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	// 即使 Email 不存在，也應該回成功（安全設計）
 	assert.Equal(t, float64(0), response["state"])
 
@@ -324,7 +331,8 @@ func TestForgetPassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response["state"])
 	assert.Equal(t, float64(0), response["code"]) // RequiredField
 
@@ -340,7 +348,8 @@ func TestForgetPassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response["state"])
 	assert.Equal(t, float64(0), response["code"]) // RequiredField (驗證失敗)
 
@@ -411,7 +420,8 @@ func TestResetPassword(t *testing.T) {
 	testRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 	assert.Equal(t, true, response["ret"])
 
@@ -429,7 +439,8 @@ func TestResetPassword(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 	assert.Equal(t, false, response["ret"])
 
@@ -448,7 +459,8 @@ func TestResetPassword(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w3.Code)
 
 	var response3 map[string]interface{}
-	json.Unmarshal(w3.Body.Bytes(), &response3)
+	err = json.Unmarshal(w3.Body.Bytes(), &response3)
+	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response3["state"])
 
 	// 測試 4: Email 不存在
@@ -466,7 +478,8 @@ func TestResetPassword(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w4.Code)
 
 	var response4 map[string]interface{}
-	json.Unmarshal(w4.Body.Bytes(), &response4)
+	err = json.Unmarshal(w4.Body.Bytes(), &response4)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response4["state"])
 	assert.Equal(t, false, response4["ret"])
 
@@ -485,7 +498,8 @@ func TestResetPassword(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w5.Code)
 
 	var response5 map[string]interface{}
-	json.Unmarshal(w5.Body.Bytes(), &response5)
+	err = json.Unmarshal(w5.Body.Bytes(), &response5)
+	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response5["state"])
 
 	// 確保 cookie 變數被使用（避免編譯警告）
