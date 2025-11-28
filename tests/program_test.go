@@ -32,7 +32,8 @@ func TestSaveProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp)
+ err := json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelData, ok := channelResp["Data"]
@@ -69,7 +70,8 @@ func TestSaveProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var addProgramResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &addProgramResp)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	// 取得節目 ID
 	addProgramData, ok := addProgramResp["Data"]
@@ -105,7 +107,8 @@ func TestSaveProgram(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 檢查回應包含 program 欄位
@@ -146,7 +149,8 @@ func TestSaveProgram(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 驗證頻道封面已更新
@@ -156,7 +160,8 @@ func TestSaveProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResponse)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channelResponseData, ok := channelResponse["Data"]
 	if !ok {
@@ -203,7 +208,8 @@ func TestDeleteProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp)
+ err := json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelData, ok := channelResp["Data"]
@@ -242,7 +248,8 @@ func TestDeleteProgram(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code)
 
 		var addProgramResp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &addProgramResp)
+  err = json.Unmarshal(w.Body.Bytes(), &response)
+  require.NoError(t, err)
 
 		// 取得節目 ID
 		addProgramData, ok := addProgramResp["Data"]
@@ -274,7 +281,8 @@ func TestDeleteProgram(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 驗證節目已刪除
@@ -284,7 +292,8 @@ func TestDeleteProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResponse)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channelResponseData, ok := channelResponse["Data"]
 	if !ok {
@@ -317,7 +326,8 @@ func TestDeleteProgram(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 驗證所有節目已刪除
@@ -326,7 +336,8 @@ func TestDeleteProgram(t *testing.T) {
 	testRouter.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &channelResponse)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channelResponseData, ok = channelResponse["Data"]
 	if !ok {
@@ -362,7 +373,8 @@ func TestDeleteProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp2 map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp2)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channelData2, ok := channelResp2["Data"]
 	if !ok {
@@ -390,7 +402,8 @@ func TestDeleteProgram(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	// 應該回傳權限錯誤
 	assert.NotEqual(t, float64(0), response["state"])
 }
@@ -416,7 +429,8 @@ func TestMoveProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channel1Resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channel1Resp)
+ err := json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channel1Data, ok := channel1Resp["Data"]
 	if !ok {
@@ -443,7 +457,8 @@ func TestMoveProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channel2Resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channel2Resp)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channel2Data, ok := channel2Resp["Data"]
 	if !ok {
@@ -477,7 +492,8 @@ func TestMoveProgram(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code)
 
 		var addProgramResp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &addProgramResp)
+  err = json.Unmarshal(w.Body.Bytes(), &response)
+  require.NoError(t, err)
 
 		addProgramData, ok := addProgramResp["Data"]
 		if !ok {
@@ -509,7 +525,8 @@ func TestMoveProgram(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 驗證節目已移動
@@ -519,7 +536,8 @@ func TestMoveProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channel1Response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channel1Response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channel1ResponseData, ok := channel1Response["Data"]
 	if !ok {
@@ -541,7 +559,8 @@ func TestMoveProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channel2Response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channel2Response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channel2ResponseData, ok := channel2Response["Data"]
 	if !ok {
@@ -571,7 +590,8 @@ func TestMoveProgram(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 驗證所有節目已移動
@@ -580,7 +600,8 @@ func TestMoveProgram(t *testing.T) {
 	testRouter.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &channel1Response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channel1ResponseData, ok = channel1Response["Data"]
 	if !ok {
@@ -612,7 +633,8 @@ func TestMoveProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channel3Resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channel3Resp)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channel3Data, ok := channel3Resp["Data"]
 	if !ok {
@@ -641,7 +663,8 @@ func TestMoveProgram(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	// 應該回傳權限錯誤
 	assert.NotEqual(t, float64(0), response["state"])
 
@@ -660,7 +683,8 @@ func TestMoveProgram(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	// 應該回傳權限錯誤
 	assert.NotEqual(t, float64(0), response["state"])
 }
@@ -686,7 +710,8 @@ func TestSaveProgramOrder(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp)
+ err := json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelData, ok := channelResp["Data"]
@@ -725,7 +750,8 @@ func TestSaveProgramOrder(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code)
 
 		var addProgramResp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &addProgramResp)
+  err = json.Unmarshal(w.Body.Bytes(), &response)
+  require.NoError(t, err)
 
 		addProgramData, ok := addProgramResp["Data"]
 		if !ok {
@@ -758,7 +784,8 @@ func TestSaveProgramOrder(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 驗證順序已更新
@@ -768,7 +795,8 @@ func TestSaveProgramOrder(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResponse)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channelResponseData, ok := channelResponse["Data"]
 	if !ok {
@@ -808,7 +836,8 @@ func TestSaveProgramOrder(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp2 map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp2)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	channelData2, ok := channelResp2["Data"]
 	if !ok {
@@ -836,7 +865,8 @@ func TestSaveProgramOrder(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	// 應該回傳權限錯誤
 	assert.NotEqual(t, float64(0), response["state"])
 
@@ -854,7 +884,8 @@ func TestSaveProgramOrder(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	// 應該回傳缺少必填欄位錯誤
 	assert.NotEqual(t, float64(0), response["state"])
 }
@@ -880,7 +911,8 @@ func TestAddProgramWithUpdateCover(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp)
+ err := json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelData, ok := channelResp["Data"]
@@ -919,7 +951,8 @@ func TestAddProgramWithUpdateCover(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 檢查 Data 欄位
@@ -937,7 +970,8 @@ func TestAddProgramWithUpdateCover(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResponse)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelResponseData, okChannelResp := channelResponse["Data"]
@@ -991,7 +1025,8 @@ func TestAddProgramWithoutUpdateCover(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp)
+ err := json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelData, ok := channelResp["Data"]
@@ -1029,7 +1064,8 @@ func TestAddProgramWithoutUpdateCover(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 檢查 Data 欄位
