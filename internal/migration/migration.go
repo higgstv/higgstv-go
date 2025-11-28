@@ -100,7 +100,11 @@ func getExecutedMigrations(ctx context.Context, coll *mongo.Collection) ([]strin
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() {
+		if err := cursor.Close(ctx); err != nil {
+			// 記錄錯誤但不中斷執行
+		}
+	}()
 
 	var results []struct {
 		ID string `bson:"_id"`

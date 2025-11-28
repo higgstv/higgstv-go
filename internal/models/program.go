@@ -6,6 +6,7 @@ import "time"
 type ProgramType string
 
 const (
+	// ProgramTypeYouTube YouTube 節目類型
 	ProgramTypeYouTube ProgramType = "youtube"
 )
 

@@ -34,7 +34,11 @@ func main() {
 		fmt.Printf("❌ Failed to connect: %v\n", err)
 		os.Exit(1)
 	}
-	defer client.Disconnect(context.Background())
+	defer func() {
+		if err := client.Disconnect(context.Background()); err != nil {
+			fmt.Printf("⚠️  Failed to disconnect: %v\n", err)
+		}
+	}()
 
 	// Ping MongoDB
 	fmt.Printf("🏓 Pinging MongoDB...\n")

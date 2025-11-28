@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// Logger 全域 Logger 實例
 var Logger *zap.Logger
 
 // Init 初始化 Logger

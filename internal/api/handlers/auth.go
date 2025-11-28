@@ -73,7 +73,7 @@ func SignIn(db *mongo.Database, config interface{}) gin.HandlerFunc {
 // @Router       /apis/signout [get]
 func SignOut() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		session.Clear(c)
+		_ = session.Clear(c)
 
 		// 檢查是否有 redirect 參數
 		if redirect := c.Query("redirect"); redirect != "" {
@@ -266,14 +266,14 @@ func ForgetPassword(db *mongo.Database, mailConfig interface{}) gin.HandlerFunc 
 			// 發送郵件（非同步，不阻塞回應）
 			go func() {
 				if cfg, ok := mailConfig.(*config.Config); ok && cfg != nil {
-					mailService := mail.NewMailService(mail.MailConfig{
+					mailService := mail.NewService(mail.Config{
 						SMTPHost:     cfg.Mail.SMTPHost,
 						SMTPPort:     cfg.Mail.SMTPPort,
 						SMTPUser:     cfg.Mail.SMTPUser,
 						SMTPPassword: cfg.Mail.SMTPPassword,
 						From:         cfg.Mail.From,
 					})
-					mailService.SendPasswordReset(req.Email, accessKey, cfg.Mail.BaseURL)
+					_ = mailService.SendPasswordReset(req.Email, accessKey, cfg.Mail.BaseURL)
 				}
 			}()
 		}

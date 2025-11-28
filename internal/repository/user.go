@@ -208,7 +208,11 @@ func (r *UserRepository) GetUsersBasicInfo(ctx context.Context, userIDs []string
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() {
+		if err := cursor.Close(ctx); err != nil {
+			// 記錄錯誤但不中斷執行
+		}
+	}()
 
 	var users []models.User
 	if err := cursor.All(ctx, &users); err != nil {

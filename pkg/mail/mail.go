@@ -5,8 +5,8 @@ import (
 	"net/smtp"
 )
 
-// MailConfig 郵件配置
-type MailConfig struct {
+// Config 郵件配置
+type Config struct {
 	SMTPHost     string
 	SMTPPort     int
 	SMTPUser     string
@@ -14,18 +14,18 @@ type MailConfig struct {
 	From         string
 }
 
-// MailService 郵件服務
-type MailService struct {
-	config MailConfig
+// Service 郵件服務
+type Service struct {
+	config Config
 }
 
-// NewMailService 建立郵件服務
-func NewMailService(config MailConfig) *MailService {
-	return &MailService{config: config}
+// NewService 建立郵件服務
+func NewService(config Config) *Service {
+	return &Service{config: config}
 }
 
 // Send 發送郵件
-func (s *MailService) Send(to, subject, body string) error {
+func (s *Service) Send(to, subject, body string) error {
 	auth := smtp.PlainAuth("", s.config.SMTPUser, s.config.SMTPPassword, s.config.SMTPHost)
 
 	msg := []byte(fmt.Sprintf(
@@ -38,7 +38,7 @@ func (s *MailService) Send(to, subject, body string) error {
 }
 
 // SendPasswordReset 發送重設密碼郵件
-func (s *MailService) SendPasswordReset(to, accessKey, baseURL string) error {
+func (s *Service) SendPasswordReset(to, accessKey, baseURL string) error {
 	resetURL := fmt.Sprintf("%s/ResetPassword/%s?email=%s", baseURL, accessKey, to)
 	body := fmt.Sprintf(`
 		<p>Hi,</p>

@@ -21,8 +21,8 @@ func setupTestDB(t *testing.T) (*mongo.Database, func()) {
 	db := client.Database("higgstv_test")
 
 	cleanup := func() {
-		db.Drop(context.Background())
-		client.Disconnect(context.Background())
+		_ = db.Drop(context.Background())
+		_ = client.Disconnect(context.Background())
 	}
 
 	return db, cleanup

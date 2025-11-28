@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// RequestIDKey Request ID 的 Context Key
 const RequestIDKey = "X-Request-ID"
 
 // RequestID 為每個請求產生唯一的 Request ID
