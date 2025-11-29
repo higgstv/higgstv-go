@@ -62,9 +62,10 @@ check: test lint
 
 # 安裝開發工具
 install-tools:
-	@echo "Installing golangci-lint..."
-	@which golangci-lint > /dev/null || (curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin latest)
+	@echo "Installing golangci-lint v1 (latest stable)..."
+	@which golangci-lint > /dev/null && golangci-lint --version | grep -q "version 1\." || (curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.64.8)
 	@echo "✅ Tools installed!"
+	@golangci-lint --version
 
 # 執行前檢查
 pre-run: fmt lint test
