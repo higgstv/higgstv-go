@@ -53,6 +53,7 @@ func (s *ProgramService) AddProgram(ctx context.Context, channelID string, name,
 		if err := s.channelRepo.Update(ctx, channelID, update); err != nil {
 			// 封面更新失敗不影響節目新增，只記錄錯誤
 			// 可以考慮加入 logger 記錄
+			_ = err // 忽略錯誤，繼續執行
 		}
 	}
 
@@ -96,6 +97,7 @@ func (s *ProgramService) UpdateProgram(ctx context.Context, channelID string, pr
 		}
 		if err := s.channelRepo.Update(ctx, channelID, coverUpdate); err != nil {
 			// 封面更新失敗不影響節目更新，只記錄錯誤
+			_ = err // 忽略錯誤，繼續執行
 		}
 	}
 
@@ -152,7 +154,6 @@ func (s *ProgramService) MoveProgram(ctx context.Context, sourceChannelID, targe
 
 	// 找出要移動的節目
 	var programsToMove []models.Program
-	var remainingPrograms []models.Program
 	programIDMap := make(map[int]bool)
 	for _, id := range programIDs {
 		programIDMap[id] = true
@@ -161,9 +162,8 @@ func (s *ProgramService) MoveProgram(ctx context.Context, sourceChannelID, targe
 	for _, program := range sourceChannel.Contents {
 		if programIDMap[program.ID] {
 			programsToMove = append(programsToMove, program)
-		} else {
-			remainingPrograms = append(remainingPrograms, program)
 		}
+		// 不需要移動的節目會保留在原頻道中（DeletePrograms 只刪除指定的節目）
 	}
 
 	// 從來源頻道刪除

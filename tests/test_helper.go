@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -23,7 +24,6 @@ import (
 
 var testDB *mongo.Database
 var testRouter *gin.Engine
-var testConfig *config.Config
 
 // SetupTestDB 設定測試資料庫
 func SetupTestDB(t *testing.T) {
@@ -31,9 +31,8 @@ func SetupTestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
-	testConfig = cfg
 
-	client, err := mongo.Connect(nil, options.Client().ApplyURI(cfg.Database.URI))
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(cfg.Database.URI))
 	if err != nil {
 		t.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
@@ -73,7 +72,7 @@ func SetupTestDB(t *testing.T) {
 // CleanupTestDB 清理測試資料庫
 func CleanupTestDB(t *testing.T) {
 	if testDB != nil {
-		_ = testDB.Drop(nil)
+		_ = testDB.Drop(context.TODO())
 	}
 }
 
