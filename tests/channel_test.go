@@ -32,7 +32,8 @@ func TestGetChannel(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp)
+	err := json.Unmarshal(w.Body.Bytes(), &channelResp)
+	require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelData, ok := channelResp["Data"]
@@ -59,7 +60,8 @@ func TestGetChannel(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 檢查回應包含 channel 欄位
@@ -87,7 +89,8 @@ func TestGetChannel(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 測試 3: 取得不存在的頻道
@@ -97,7 +100,8 @@ func TestGetChannel(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	// 應該回傳錯誤或空資料
 	assert.NotEqual(t, float64(0), response["state"])
 }
@@ -123,7 +127,8 @@ func TestGetChannelInfo(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp)
+	err = json.Unmarshal(w.Body.Bytes(), &channelResp)
+	require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelData, ok := channelResp["Data"]
@@ -151,7 +156,8 @@ func TestGetChannelInfo(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.NotEqual(t, float64(0), response["state"])
 
 	// 測試 2: 登入後取得頻道資訊
@@ -162,7 +168,8 @@ func TestGetChannelInfo(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 檢查回應包含 channel 欄位和 owners_info
@@ -213,7 +220,8 @@ func TestSaveChannel(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp)
+	err = json.Unmarshal(w.Body.Bytes(), &channelResp)
+	require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelData, ok := channelResp["Data"]
@@ -249,7 +257,8 @@ func TestSaveChannel(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 驗證頻道已更新
@@ -259,7 +268,8 @@ func TestSaveChannel(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResponse)
+	err = json.Unmarshal(w.Body.Bytes(), &channelResponse)
+	require.NoError(t, err)
 
 	channelResponseData, ok := channelResponse["Data"]
 	if !ok {
@@ -299,7 +309,8 @@ func TestSaveChannel(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 測試 3: 無權限更新（使用其他使用者的頻道）
@@ -319,7 +330,8 @@ func TestSaveChannel(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp2 map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp2)
+	err = json.Unmarshal(w.Body.Bytes(), &channelResp2)
+	require.NoError(t, err)
 
 	channelData2, ok := channelResp2["Data"]
 	if !ok {
@@ -347,7 +359,8 @@ func TestSaveChannel(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	// 應該回傳權限錯誤
 	assert.NotEqual(t, float64(0), response["state"])
 
@@ -365,7 +378,8 @@ func TestSaveChannel(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	// 應該回傳缺少必填欄位錯誤
 	assert.NotEqual(t, float64(0), response["state"])
 }
@@ -452,7 +466,8 @@ func TestGetOwnChannelsWithQueryParams(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 檢查 Data 欄位
@@ -507,7 +522,8 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 檢查 Data 欄位
@@ -532,7 +548,8 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 	testRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 測試 has_contents 參數
@@ -541,7 +558,8 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 	testRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 測試 ignore_types 參數
@@ -550,7 +568,8 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 	testRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 測試 start 和 desc 參數
@@ -559,7 +578,8 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 	testRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 }
 
@@ -586,7 +606,8 @@ func TestSetChannelOwnerWithEmail(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &channelResp)
+	err = json.Unmarshal(w.Body.Bytes(), &channelResp)
+	require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelData, ok := channelResp["Data"]
@@ -620,7 +641,8 @@ func TestSetChannelOwnerWithEmail(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
 	// 驗證頻道擁有者已更新
@@ -630,7 +652,8 @@ func TestSetChannelOwnerWithEmail(t *testing.T) {
 	testRouter.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	responseData, ok := response["Data"]
