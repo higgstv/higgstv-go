@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/higgstv/higgstv-go/internal/api/response"
 	"github.com/higgstv/higgstv-go/pkg/session"
 )
 
@@ -9,7 +10,8 @@ import (
 func RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !session.IsLoggedIn(c) {
-			// 根據原 API 行為，未登入時直接結束（無回應）
+			// 未登入時返回錯誤響應
+			response.Error(c, response.ErrorRequireLogin)
 			c.Abort()
 			return
 		}
