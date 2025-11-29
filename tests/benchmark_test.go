@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +22,7 @@ var benchmarkRouter *gin.Engine
 
 func initBenchmark() {
 	cfg, _ := config.Load()
-	client, _ := mongo.Connect(nil, options.Client().ApplyURI(cfg.Database.URI))
+	client, _ := mongo.Connect(context.TODO(), options.Client().ApplyURI(cfg.Database.URI))
 	benchmarkDB = client.Database(cfg.Database.Database + "_benchmark")
 	session.Init(cfg.Session.Secret)
 	gin.SetMode(gin.TestMode)

@@ -97,6 +97,7 @@ func (r *ChannelRepository) ListChannels(ctx context.Context, filter bson.M, sor
 	defer func() {
 		if err := cursor.Close(ctx); err != nil {
 			// 記錄錯誤但不中斷執行
+			_ = err // 忽略錯誤，繼續執行
 		}
 	}()
 

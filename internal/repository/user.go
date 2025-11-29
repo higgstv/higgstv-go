@@ -211,6 +211,7 @@ func (r *UserRepository) GetUsersBasicInfo(ctx context.Context, userIDs []string
 	defer func() {
 		if err := cursor.Close(ctx); err != nil {
 			// 記錄錯誤但不中斷執行
+			_ = err // 忽略錯誤，繼續執行
 		}
 	}()
 

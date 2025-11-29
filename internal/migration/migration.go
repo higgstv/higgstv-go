@@ -103,6 +103,7 @@ func getExecutedMigrations(ctx context.Context, coll *mongo.Collection) ([]strin
 	defer func() {
 		if err := cursor.Close(ctx); err != nil {
 			// 記錄錯誤但不中斷執行
+			_ = err // 忽略錯誤，繼續執行
 		}
 	}()
 

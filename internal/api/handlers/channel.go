@@ -108,7 +108,7 @@ func GetOwnChannels(db *mongo.Database) gin.HandlerFunc {
 		channels, err := channelRepo.ListChannels(
 			c.Request.Context(),
 			filter,
-			bson.D{{"last_modified", -1}},
+			bson.D{{Key: "last_modified", Value: -1}},
 			0,
 			0,
 		)
@@ -184,9 +184,9 @@ func GetChannels(db *mongo.Database) gin.HandlerFunc {
 
 		var sort bson.D
 		if sortField == "name" {
-			sort = bson.D{{"name", order}}
+			sort = bson.D{{Key: "name", Value: order}}
 		} else {
-			sort = bson.D{{"last_modified", order}}
+			sort = bson.D{{Key: "last_modified", Value: order}}
 		}
 
 		// 分頁（支援 start 和 skip，start 優先）

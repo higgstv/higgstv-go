@@ -59,6 +59,7 @@ func Load() (*Config, error) {
 
 	if err := viper.ReadInConfig(); err != nil {
 		// 如果找不到配置檔，使用環境變數和預設值
+		_ = err // 忽略錯誤，繼續使用預設值
 	}
 
 	config := &Config{}
