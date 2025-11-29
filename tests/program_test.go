@@ -373,8 +373,8 @@ func TestDeleteProgram(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp2 map[string]interface{}
- err = json.Unmarshal(w.Body.Bytes(), &response)
- require.NoError(t, err)
+	err = json.Unmarshal(w.Body.Bytes(), &channelResp2)
+	require.NoError(t, err)
 
 	channelData2, ok := channelResp2["Data"]
 	if !ok {
@@ -836,8 +836,8 @@ func TestSaveProgramOrder(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp2 map[string]interface{}
- err = json.Unmarshal(w.Body.Bytes(), &response)
- require.NoError(t, err)
+	err = json.Unmarshal(w.Body.Bytes(), &channelResp2)
+	require.NoError(t, err)
 
 	channelData2, ok := channelResp2["Data"]
 	if !ok {
@@ -970,8 +970,8 @@ func TestAddProgramWithUpdateCover(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
- err = json.Unmarshal(w.Body.Bytes(), &response)
- require.NoError(t, err)
+	err = json.Unmarshal(w.Body.Bytes(), &channelResponse)
+	require.NoError(t, err)
 
 	// 檢查 Data 欄位
 	channelResponseData, okChannelResp := channelResponse["Data"]
