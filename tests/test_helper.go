@@ -73,7 +73,7 @@ func SetupTestDB(t *testing.T) {
 // CleanupTestDB 清理測試資料庫
 func CleanupTestDB(t *testing.T) {
 	if testDB != nil {
-		testDB.Drop(nil)
+		_ = testDB.Drop(nil)
 	}
 }
 

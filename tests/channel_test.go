@@ -606,7 +606,7 @@ func TestSetChannelOwnerWithEmail(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &channelResp)
+	err := json.Unmarshal(w.Body.Bytes(), &channelResp)
 	require.NoError(t, err)
 
 	// 檢查 Data 欄位
