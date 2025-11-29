@@ -336,8 +336,8 @@ func TestDeleteProgram(t *testing.T) {
 	testRouter.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
- err = json.Unmarshal(w.Body.Bytes(), &response)
- require.NoError(t, err)
+	err = json.Unmarshal(w.Body.Bytes(), &channelResponse)
+	require.NoError(t, err)
 
 	channelResponseData, ok = channelResponse["Data"]
 	if !ok {
