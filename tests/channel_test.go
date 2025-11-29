@@ -60,7 +60,7 @@ func TestGetChannel(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
@@ -127,7 +127,7 @@ func TestGetChannelInfo(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &channelResp)
+	err := json.Unmarshal(w.Body.Bytes(), &channelResp)
 	require.NoError(t, err)
 
 	// 檢查 Data 欄位
@@ -220,7 +220,7 @@ func TestSaveChannel(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &channelResp)
+	err := json.Unmarshal(w.Body.Bytes(), &channelResp)
 	require.NoError(t, err)
 
 	// 檢查 Data 欄位
@@ -257,7 +257,7 @@ func TestSaveChannel(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
@@ -466,7 +466,7 @@ func TestGetOwnChannelsWithQueryParams(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
@@ -522,7 +522,7 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &response)
+	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, float64(0), response["state"])
 
