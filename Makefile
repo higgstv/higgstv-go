@@ -1,4 +1,4 @@
-.PHONY: build run test clean lint fmt swagger
+.PHONY: build run test clean lint fmt swagger ci check install-tools
 
 # 變數
 BINARY_NAME=higgstv-go
@@ -15,9 +15,10 @@ build:
 run:
 	@go run $(MAIN_PATH)
 
-# 測試
+# 測試（與 CI 一致）
 test:
-	@go test -v ./...
+	@echo "Running tests..."
+	@go test -v -coverprofile=coverage.out ./...
 
 # 測試覆蓋率
 test-coverage:
@@ -29,8 +30,9 @@ clean:
 	@rm -rf $(BUILD_DIR)
 	@rm -f coverage.out coverage.html
 
-# Lint
+# Lint（與 CI 一致）
 lint:
+	@echo "Running linter..."
 	@golangci-lint run
 
 # 格式化
@@ -47,6 +49,22 @@ swagger:
 deps:
 	@go mod download
 	@go mod tidy
+
+# CI 檢查：運行所有 CI 相關檢查（測試、lint、構建）
+ci: test lint build
+	@echo ""
+	@echo "✅ All CI checks passed!"
+
+# 快速檢查：只運行測試和 lint（不構建）
+check: test lint
+	@echo ""
+	@echo "✅ Quick check passed!"
+
+# 安裝開發工具
+install-tools:
+	@echo "Installing golangci-lint..."
+	@which golangci-lint > /dev/null || (curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin latest)
+	@echo "✅ Tools installed!"
 
 # 執行前檢查
 pre-run: fmt lint test
