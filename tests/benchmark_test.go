@@ -7,23 +7,50 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/higgstv/higgstv-go/internal/api"
 	"github.com/higgstv/higgstv-go/internal/config"
+	"github.com/higgstv/higgstv-go/internal/database"
 	"github.com/higgstv/higgstv-go/pkg/session"
 )
 
-var benchmarkDB *mongo.Database
+var benchmarkDB database.Database
 var benchmarkRouter *gin.Engine
 
 func initBenchmark() {
 	cfg, _ := config.Load()
-	client, _ := mongo.Connect(context.TODO(), options.Client().ApplyURI(cfg.Database.URI))
-	benchmarkDB = client.Database(cfg.Database.Database + "_benchmark")
+	
+	// 解析資料庫類型
+	dbType, err := database.ParseDatabaseType(cfg.Database.Type)
+	if err != nil {
+		// 如果解析失敗，預設使用 MongoDB
+		dbType = database.DatabaseTypeMongoDB
+	}
+
+	// 建立測試資料庫連線
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	benchmarkDBName := cfg.Database.Database + "_benchmark"
+	benchmarkURI := cfg.Database.URI
+	if dbType == database.DatabaseTypeSQLite {
+		// SQLite 測試使用記憶體資料庫
+		benchmarkURI = "file::memory:?cache=shared"
+	}
+
+	benchmarkDB, err = database.NewDatabase(ctx, database.DatabaseConfig{
+		Type:     dbType,
+		URI:      benchmarkURI,
+		Database: benchmarkDBName,
+	})
+	if err != nil {
+		// 如果連線失敗，benchmark 測試會跳過
+		return
+	}
+
 	session.Init(cfg.Session.Secret)
 	gin.SetMode(gin.TestMode)
 	benchmarkRouter = gin.New()

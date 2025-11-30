@@ -2,14 +2,14 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/higgstv/higgstv-go/internal/api/handlers"
 	"github.com/higgstv/higgstv-go/internal/api/middleware"
+	"github.com/higgstv/higgstv-go/internal/database"
 )
 
 // SetupRoutes 設定路由
-func SetupRoutes(router *gin.Engine, db *mongo.Database, config interface{}) {
+func SetupRoutes(router *gin.Engine, db database.Database, config interface{}) {
 	// 404 處理
 	router.NoRoute(middleware.NotFoundHandler())
 	// 認證相關 API

@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/higgstv/higgstv-go/internal/api/response"
+	"github.com/higgstv/higgstv-go/internal/database"
 	"github.com/higgstv/higgstv-go/internal/repository"
 	"github.com/higgstv/higgstv-go/internal/service"
 	"github.com/higgstv/higgstv-go/pkg/session"
@@ -41,7 +41,7 @@ type PickProgramRequest struct {
 // @Success      200 "成功回應（JSONP 格式）"
 // @Failure      200 "需要登入或參數無效"
 // @Router       /apis/pickprog [get]
-func PickProgram(db *mongo.Database) gin.HandlerFunc {
+func PickProgram(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req PickProgramRequest
 		if err := c.ShouldBindQuery(&req); err != nil {

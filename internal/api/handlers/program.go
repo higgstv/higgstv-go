@@ -1,13 +1,14 @@
 package handlers
 
 import (
-
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/zap"
 
 	"github.com/higgstv/higgstv-go/internal/api/response"
+	"github.com/higgstv/higgstv-go/internal/database"
 	"github.com/higgstv/higgstv-go/internal/repository"
 	"github.com/higgstv/higgstv-go/internal/service"
+	"github.com/higgstv/higgstv-go/pkg/logger"
 	"github.com/higgstv/higgstv-go/pkg/session"
 )
 
@@ -33,7 +34,7 @@ type AddProgramRequest struct {
 // @Success      200 {object} map[string]interface{} "成功回應"
 // @Failure      200 {object} map[string]interface{} "需要登入或權限不足" example({"state":1,"code":2})
 // @Router       /apis/addprog [post]
-func AddProgram(db *mongo.Database) gin.HandlerFunc {
+func AddProgram(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req AddProgramRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -110,7 +111,7 @@ type SaveProgramRequest struct {
 // @Failure      200 {object} map[string]interface{} "缺少必填欄位" example({"state":1,"code":0})
 // @Failure      200 {object} map[string]interface{} "權限不足" example({"state":1,"code":2})
 // @Router       /apis/saveprog [post]
-func SaveProgram(db *mongo.Database) gin.HandlerFunc {
+func SaveProgram(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req SaveProgramRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -178,7 +179,7 @@ type DeleteProgramRequest struct {
 // @Failure      200 {object} map[string]interface{} "缺少必填欄位" example({"state":1,"code":0})
 // @Failure      200 {object} map[string]interface{} "權限不足" example({"state":1,"code":2})
 // @Router       /apis/delprog [post]
-func DeleteProgram(db *mongo.Database) gin.HandlerFunc {
+func DeleteProgram(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req DeleteProgramRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -210,6 +211,14 @@ func DeleteProgram(db *mongo.Database) gin.HandlerFunc {
 
 		err = programService.DeletePrograms(c.Request.Context(), req.Ch, req.IDs)
 		if err != nil {
+			// 記錄錯誤以便除錯
+			if logger.Logger != nil {
+				logger.Logger.Error("Failed to delete programs",
+					zap.String("channel_id", req.Ch),
+					zap.Any("program_ids", req.IDs),
+					zap.Error(err),
+				)
+			}
 			response.Error(c, response.ErrorServerError)
 			return
 		}
@@ -237,7 +246,7 @@ type MoveProgramRequest struct {
 // @Failure      200 {object} map[string]interface{} "缺少必填欄位" example({"state":1,"code":0})
 // @Failure      200 {object} map[string]interface{} "權限不足" example({"state":1,"code":2})
 // @Router       /apis/progmoveto [post]
-func MoveProgram(db *mongo.Database) gin.HandlerFunc {
+func MoveProgram(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req MoveProgramRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -306,7 +315,7 @@ type SaveProgramOrderRequest struct {
 // @Failure      200 {object} map[string]interface{} "缺少必填欄位" example({"state":1,"code":0})
 // @Failure      200 {object} map[string]interface{} "權限不足" example({"state":1,"code":2})
 // @Router       /apis/prog/saveorder [post]
-func SaveProgramOrder(db *mongo.Database) gin.HandlerFunc {
+func SaveProgramOrder(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req SaveProgramOrderRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
