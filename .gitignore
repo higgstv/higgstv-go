@@ -7,6 +7,14 @@
 bin/
 dist/
 
+# Compiled binaries (should not be tracked)
+server
+check_database
+check_mongodb
+migrate
+migrate_mongodb_to_sqlite
+test_linter
+
 # Test binary
 *.test
 
