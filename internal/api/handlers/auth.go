@@ -4,16 +4,16 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/zap"
 
 	"github.com/higgstv/higgstv-go/internal/api/response"
 	"github.com/higgstv/higgstv-go/internal/config"
+	"github.com/higgstv/higgstv-go/internal/database"
 	"github.com/higgstv/higgstv-go/internal/repository"
 	"github.com/higgstv/higgstv-go/internal/service"
 	"github.com/higgstv/higgstv-go/pkg/logger"
 	"github.com/higgstv/higgstv-go/pkg/mail"
 	"github.com/higgstv/higgstv-go/pkg/session"
-	"go.uber.org/zap"
 )
 
 // SignInRequest 登入請求
@@ -32,7 +32,7 @@ type SignInRequest struct {
 // @Success      200 {object} map[string]interface{} "成功回應" example({"state":0,"ret":true})
 // @Failure      200 {object} map[string]interface{} "失敗回應" example({"state":0,"ret":false})
 // @Router       /apis/signin [post]
-func SignIn(db *mongo.Database, config interface{}) gin.HandlerFunc {
+func SignIn(db database.Database, config interface{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req SignInRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -104,7 +104,7 @@ type SignUpRequest struct {
 // @Success      200 {object} map[string]interface{} "成功回應" example({"state":0,"ret":true})
 // @Failure      200 {object} map[string]interface{} "失敗回應" example({"state":1,"code":2})
 // @Router       /apis/signup [post]
-func SignUp(db *mongo.Database) gin.HandlerFunc {
+func SignUp(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req SignUpRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -190,7 +190,7 @@ type ChangePasswordRequest struct {
 // @Failure      200 {object} map[string]interface{} "舊密碼錯誤" example({"state":0,"ret":false})
 // @Failure      200 {object} map[string]interface{} "缺少欄位" example({"state":1,"code":0})
 // @Router       /apis/change_password [post]
-func ChangePassword(db *mongo.Database) gin.HandlerFunc {
+func ChangePassword(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req ChangePasswordRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -236,7 +236,7 @@ type ForgetPasswordRequest struct {
 // @Success      200 {object} map[string]interface{} "成功回應" example({"state":0})
 // @Failure      200 {object} map[string]interface{} "缺少欄位" example({"state":1,"code":0})
 // @Router       /apis/forget_password [post]
-func ForgetPassword(db *mongo.Database, mailConfig interface{}) gin.HandlerFunc {
+func ForgetPassword(db database.Database, mailConfig interface{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req ForgetPasswordRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -300,7 +300,7 @@ type ResetPasswordRequest struct {
 // @Failure      200 {object} map[string]interface{} "access_key 無效或過期" example({"state":0,"ret":false})
 // @Failure      200 {object} map[string]interface{} "缺少欄位" example({"state":1,"code":0})
 // @Router       /apis/reset_password [post]
-func ResetPassword(db *mongo.Database) gin.HandlerFunc {
+func ResetPassword(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req ResetPasswordRequest
 		if err := c.ShouldBindJSON(&req); err != nil {

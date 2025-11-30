@@ -31,8 +31,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.uber.org/zap"
 
 	"github.com/higgstv/higgstv-go/internal/api"
@@ -81,34 +79,40 @@ func main() {
 	// 初始化 Session
 	session.Init(cfg.Session.Secret)
 
-	// 連接 MongoDB
+	// 連接資料庫（支援 MongoDB 和 SQLite）
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 設定 MongoDB 連線選項（連線池配置）
-	clientOptions := options.Client().ApplyURI(cfg.Database.URI).
-		SetMaxPoolSize(100).                       // 最大連線池大小
-		SetMinPoolSize(10).                        // 最小連線池大小
-		SetMaxConnIdleTime(30 * time.Second).      // 最大空閒時間
-		SetConnectTimeout(10 * time.Second).       // 連線超時
-		SetServerSelectionTimeout(5 * time.Second) // 伺服器選擇超時
-
-	client, err := mongo.Connect(ctx, clientOptions)
+	// 解析資料庫類型
+	dbType, err := database.ParseDatabaseType(cfg.Database.Type)
 	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
+		log.Fatalf("Invalid database type: %v", err)
+	}
+
+	// 建立資料庫連線
+	db, err := database.NewDatabase(ctx, database.DatabaseConfig{
+		Type:     dbType,
+		URI:      cfg.Database.URI,
+		Database: cfg.Database.Database,
+	})
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer func() {
-		if err := client.Disconnect(context.Background()); err != nil {
-			log.Printf("Failed to disconnect from MongoDB: %v", err)
+		if err := db.Close(context.Background()); err != nil {
+			log.Printf("Failed to close database connection: %v", err)
 		}
 	}()
 
 	// 測試連線
-	if err := client.Ping(ctx, nil); err != nil {
-		log.Fatalf("Failed to ping MongoDB: %v", err)
+	if err := db.Ping(ctx); err != nil {
+		log.Fatalf("Failed to ping database: %v", err)
 	}
 
-	db := client.Database(cfg.Database.Database)
+	logger.Logger.Info("Database connected",
+		zap.String("type", string(dbType)),
+		zap.String("uri", cfg.Database.URI),
+	)
 
 	// 確保資料庫索引已建立
 	if err := database.EnsureIndexesWithTimeout(db); err != nil {

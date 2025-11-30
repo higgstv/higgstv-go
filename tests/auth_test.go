@@ -17,8 +17,8 @@ import (
 
 // TestSignUp 測試註冊 API
 func TestSignUp(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	payload := map[string]interface{}{
 		"invitation_code": "sixpens",
@@ -32,7 +32,7 @@ func TestSignUp(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -58,8 +58,8 @@ func TestSignUp(t *testing.T) {
 
 // TestSignIn 測試登入 API
 func TestSignIn(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	// 先註冊
 	signupPayload := map[string]interface{}{
@@ -72,7 +72,7 @@ func TestSignIn(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/apis/signup", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	// 登入
@@ -84,7 +84,7 @@ func TestSignIn(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/apis/signin", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -97,8 +97,8 @@ func TestSignIn(t *testing.T) {
 
 // TestSignInInvalidPassword 測試錯誤密碼登入
 func TestSignInInvalidPassword(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	// 先註冊
 	signupPayload := map[string]interface{}{
@@ -111,7 +111,7 @@ func TestSignInInvalidPassword(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/apis/signup", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	// 使用錯誤密碼登入
 	loginPayload := map[string]interface{}{
@@ -122,7 +122,7 @@ func TestSignInInvalidPassword(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/apis/signin", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -135,17 +135,17 @@ func TestSignInInvalidPassword(t *testing.T) {
 
 // TestSignOut 測試登出功能
 func TestSignOut(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	// 先註冊並登入
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 測試 1: 無 redirect 參數時，應該回傳 { "state": 0 }
 	req, _ := http.NewRequest("GET", "/apis/signout", nil)
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -158,7 +158,7 @@ func TestSignOut(t *testing.T) {
 	req, _ = http.NewRequest("GET", "/apis/signout?redirect=/home", nil)
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusFound, w.Code)
 	assert.Equal(t, "/home", w.Header().Get("Location"))
@@ -166,11 +166,11 @@ func TestSignOut(t *testing.T) {
 
 // TestChangePassword 測試變更密碼 API
 func TestChangePassword(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	// 先註冊並登入
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "oldpassword123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "oldpassword123")
 
 	// 測試 1: 成功變更密碼
 	changePasswordPayload := map[string]interface{}{
@@ -182,7 +182,7 @@ func TestChangePassword(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -201,7 +201,7 @@ func TestChangePassword(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/apis/signin", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	err = json.Unmarshal(w.Body.Bytes(), &response)
@@ -210,7 +210,7 @@ func TestChangePassword(t *testing.T) {
 	assert.Equal(t, true, response["ret"])
 
 	// 測試 2: 舊密碼錯誤
-	cookie2 := getAuthCookie(t, testRouter, "testuser2", "test2@example.com", "password123")
+	cookie2 := getAuthCookie(t, ctx, "testuser2", "test2@example.com", "password123")
 
 	changePasswordPayload2 := map[string]interface{}{
 		"password":     "wrongpassword",
@@ -221,7 +221,7 @@ func TestChangePassword(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie2)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -240,7 +240,7 @@ func TestChangePassword(t *testing.T) {
 	req3.Header.Set("Content-Type", "application/json")
 	// 不設定 Cookie
 	w3 := httptest.NewRecorder()
-	testRouter.ServeHTTP(w3, req3)
+	ctx.Router.ServeHTTP(w3, req3)
 
 	assert.Equal(t, http.StatusOK, w3.Code)
 
@@ -254,7 +254,7 @@ func TestChangePassword(t *testing.T) {
 	}
 
 	// 測試 4: 缺少必填欄位
-	cookie3 := getAuthCookie(t, testRouter, "testuser3", "test3@example.com", "password123")
+	cookie3 := getAuthCookie(t, ctx, "testuser3", "test3@example.com", "password123")
 
 	changePasswordPayload4 := map[string]interface{}{
 		"password": "oldpassword123",
@@ -265,7 +265,7 @@ func TestChangePassword(t *testing.T) {
 	req4.Header.Set("Content-Type", "application/json")
 	req4.Header.Set("Cookie", cookie3)
 	w4 := httptest.NewRecorder()
-	testRouter.ServeHTTP(w4, req4)
+	ctx.Router.ServeHTTP(w4, req4)
 
 	assert.Equal(t, http.StatusOK, w4.Code)
 
@@ -278,11 +278,11 @@ func TestChangePassword(t *testing.T) {
 
 // TestForgetPassword 測試忘記密碼 API
 func TestForgetPassword(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	// 先註冊一個使用者
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "password123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "password123")
 
 	// 測試 1: Email 存在（應該成功）
 	forgetPasswordPayload := map[string]interface{}{
@@ -292,7 +292,7 @@ func TestForgetPassword(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/apis/forget_password", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -310,7 +310,7 @@ func TestForgetPassword(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/apis/forget_password", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -327,7 +327,7 @@ func TestForgetPassword(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/apis/forget_password", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -344,7 +344,7 @@ func TestForgetPassword(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/apis/forget_password", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -359,11 +359,11 @@ func TestForgetPassword(t *testing.T) {
 
 // TestResetPassword 測試重設密碼 API
 func TestResetPassword(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	// 先註冊一個使用者
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "oldpassword123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "oldpassword123")
 
 	// 產生 access_key（透過 forget_password）
 	forgetPasswordPayload := map[string]interface{}{
@@ -373,7 +373,7 @@ func TestResetPassword(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/apis/forget_password", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	// 從資料庫取得 access_key（需要直接查詢資料庫）
@@ -383,7 +383,7 @@ func TestResetPassword(t *testing.T) {
 
 	// 測試 1: 成功重設密碼（使用有效的 access_key）
 	// 先透過 service 產生 access_key
-	userRepo := repository.NewUserRepository(testDB)
+	userRepo := repository.NewUserRepository(ctx.DB)
 	authService := service.NewAuthService(userRepo)
 	accessKey, err := authService.GenerateAccessKey(context.Background(), "test@example.com")
 	require.NoError(t, err)
@@ -398,7 +398,7 @@ func TestResetPassword(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/apis/reset_password", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -417,7 +417,7 @@ func TestResetPassword(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/apis/signin", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	err = json.Unmarshal(w.Body.Bytes(), &response)
@@ -435,7 +435,7 @@ func TestResetPassword(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/apis/reset_password", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -454,7 +454,7 @@ func TestResetPassword(t *testing.T) {
 	req3, _ := http.NewRequest("POST", "/apis/reset_password", bytes.NewBuffer(jsonData3))
 	req3.Header.Set("Content-Type", "application/json")
 	w3 := httptest.NewRecorder()
-	testRouter.ServeHTTP(w3, req3)
+	ctx.Router.ServeHTTP(w3, req3)
 
 	assert.Equal(t, http.StatusOK, w3.Code)
 
@@ -473,7 +473,7 @@ func TestResetPassword(t *testing.T) {
 	req4, _ := http.NewRequest("POST", "/apis/reset_password", bytes.NewBuffer(jsonData4))
 	req4.Header.Set("Content-Type", "application/json")
 	w4 := httptest.NewRecorder()
-	testRouter.ServeHTTP(w4, req4)
+	ctx.Router.ServeHTTP(w4, req4)
 
 	assert.Equal(t, http.StatusOK, w4.Code)
 
@@ -493,7 +493,7 @@ func TestResetPassword(t *testing.T) {
 	req5, _ := http.NewRequest("POST", "/apis/reset_password", bytes.NewBuffer(jsonData5))
 	req5.Header.Set("Content-Type", "application/json")
 	w5 := httptest.NewRecorder()
-	testRouter.ServeHTTP(w5, req5)
+	ctx.Router.ServeHTTP(w5, req5)
 
 	assert.Equal(t, http.StatusOK, w5.Code)
 

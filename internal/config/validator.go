@@ -10,6 +10,14 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("server.port is required")
 	}
 
+	if c.Database.Type == "" {
+		c.Database.Type = "mongodb" // 預設為 MongoDB
+	}
+
+	if c.Database.Type != "mongodb" && c.Database.Type != "sqlite" {
+		return fmt.Errorf("database.type must be 'mongodb' or 'sqlite'")
+	}
+
 	if c.Database.URI == "" {
 		return fmt.Errorf("database.uri is required")
 	}

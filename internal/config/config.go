@@ -20,8 +20,9 @@ type ServerConfig struct {
 
 // DatabaseConfig 資料庫配置
 type DatabaseConfig struct {
-	URI      string `mapstructure:"uri"`
-	Database string `mapstructure:"database"`
+	Type     string `mapstructure:"type"`     // mongodb 或 sqlite
+	URI      string `mapstructure:"uri"`       // MongoDB URI 或 SQLite 檔案路徑
+	Database string `mapstructure:"database"` // 資料庫名稱（MongoDB）或資料庫檔案名稱（SQLite）
 }
 
 // SessionConfig Session 配置
@@ -53,6 +54,7 @@ func Load() (*Config, error) {
 	// 預設值
 	viper.SetDefault("server.port", "8080")
 	viper.SetDefault("server.env", "development")
+	viper.SetDefault("database.type", "mongodb")
 	viper.SetDefault("database.uri", "mongodb://localhost:27017")
 	viper.SetDefault("database.database", "higgstv")
 	viper.SetDefault("session.secret", "change-me-in-production")

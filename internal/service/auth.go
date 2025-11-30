@@ -8,18 +8,18 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/higgstv/higgstv-go/internal/database"
 	"github.com/higgstv/higgstv-go/internal/models"
-	"github.com/higgstv/higgstv-go/internal/repository"
 	"github.com/higgstv/higgstv-go/pkg/uuidutil"
 )
 
 // AuthService 認證服務
 type AuthService struct {
-	userRepo *repository.UserRepository
+	userRepo database.UserRepository
 }
 
 // NewAuthService 建立認證服務
-func NewAuthService(userRepo *repository.UserRepository) *AuthService {
+func NewAuthService(userRepo database.UserRepository) *AuthService {
 	return &AuthService{
 		userRepo: userRepo,
 	}

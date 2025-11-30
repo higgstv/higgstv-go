@@ -20,4 +20,11 @@ issues:
   exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
-
+  exclude-rules:
+    # 排除 revive 的 stutter 和 exported const 警告（風格問題，不影響功能）
+    - linters:
+        - revive
+      text: "type name will be used as.*by other packages, and that stutters"
+    - linters:
+        - revive
+      text: "exported const.*should have comment"

@@ -4,11 +4,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 
 	"github.com/higgstv/higgstv-go/internal/api/response"
+	"github.com/higgstv/higgstv-go/internal/database"
 	"github.com/higgstv/higgstv-go/internal/models"
 	"github.com/higgstv/higgstv-go/internal/repository"
 	"github.com/higgstv/higgstv-go/internal/service"
@@ -33,7 +32,7 @@ type AddChannelRequest struct {
 // @Success      200 {object} map[string]interface{} "成功回應"
 // @Failure      200 {object} map[string]interface{} "需要登入" example({"state":1,"code":1})
 // @Router       /apis/addchannel [post]
-func AddChannel(db *mongo.Database) gin.HandlerFunc {
+func AddChannel(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req AddChannelRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -82,7 +81,7 @@ func AddChannel(db *mongo.Database) gin.HandlerFunc {
 // @Success      200 {object} map[string]interface{} "成功回應"
 // @Failure      200 {object} map[string]interface{} "需要登入" example({"state":1,"code":1})
 // @Router       /apis/getownchannels [get]
-func GetOwnChannels(db *mongo.Database) gin.HandlerFunc {
+func GetOwnChannels(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := session.GetUserID(c)
 		if userID == "" {
@@ -91,24 +90,24 @@ func GetOwnChannels(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		// 建立過濾條件
-		filter := bson.M{"owners": userID}
+		filter := database.Filter{"owners": userID}
 
 		// 處理關鍵字搜尋（q 參數）
 		if q := c.Query("q"); q != "" {
-			filter["name"] = bson.M{"$regex": q, "$options": "i"}
+			filter["name"] = database.Filter{"$regex": q, "$options": "i"}
 		}
 
 		// 處理頻道類型過濾（types[] 參數）
 		types := c.QueryArray("types")
 		if len(types) > 0 {
-			filter["type"] = bson.M{"$in": types}
+			filter["type"] = database.Filter{"$in": types}
 		}
 
 		channelRepo := repository.NewChannelRepository(db)
 		channels, err := channelRepo.ListChannels(
 			c.Request.Context(),
 			filter,
-			bson.D{{Key: "last_modified", Value: -1}},
+			database.Sort{{Field: "last_modified", Order: -1}},
 			0,
 			0,
 		)
@@ -136,9 +135,9 @@ func GetOwnChannels(db *mongo.Database) gin.HandlerFunc {
 // @Param        limit query int false "限制筆數"
 // @Success      200 {object} map[string]interface{} "成功回應"
 // @Router       /apis/getchannels [get]
-func GetChannels(db *mongo.Database) gin.HandlerFunc {
+func GetChannels(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		filter := bson.M{}
+		filter := database.Filter{}
 
 		// 處理 user 參數（透過 username 查詢使用者 ID）
 		if username := c.Query("user"); username != "" {
@@ -155,23 +154,23 @@ func GetChannels(db *mongo.Database) gin.HandlerFunc {
 
 		// 處理關鍵字搜尋（q 參數，文件規範使用 q 而非 name）
 		if q := c.Query("q"); q != "" {
-			filter["name"] = bson.M{"$regex": q, "$options": "i"}
+			filter["name"] = database.Filter{"$regex": q, "$options": "i"}
 		} else if name := c.Query("name"); name != "" {
 			// 向後相容：也支援 name 參數
-			filter["name"] = bson.M{"$regex": name, "$options": "i"}
+			filter["name"] = database.Filter{"$regex": name, "$options": "i"}
 		}
 
 		// 處理 has_contents 參數（是否只顯示有節目的頻道）
 		if hasContentsStr := c.Query("has_contents"); hasContentsStr != "" {
 			if hasContentsStr == "1" {
-				filter["contents.0"] = bson.M{"$exists": true}
+				filter["contents.0"] = database.Filter{"$exists": true}
 			}
 		}
 
 		// 處理 ignore_types 參數（要排除的頻道類型）
 		ignoreTypes := c.QueryArray("ignore_types")
 		if len(ignoreTypes) > 0 {
-			filter["type"] = bson.M{"$nin": ignoreTypes}
+			filter["type"] = database.Filter{"$nin": ignoreTypes}
 		}
 
 		// 排序
@@ -182,11 +181,11 @@ func GetChannels(db *mongo.Database) gin.HandlerFunc {
 			order = -1
 		}
 
-		var sort bson.D
+		var sort database.Sort
 		if sortField == "name" {
-			sort = bson.D{{Key: "name", Value: order}}
+			sort = database.Sort{{Field: "name", Order: order}}
 		} else {
-			sort = bson.D{{Key: "last_modified", Value: order}}
+			sort = database.Sort{{Field: "last_modified", Order: order}}
 		}
 
 		// 分頁（支援 start 和 skip，start 優先）
@@ -236,7 +235,7 @@ func GetChannels(db *mongo.Database) gin.HandlerFunc {
 // @Success      200 {object} map[string]interface{} "成功回應"
 // @Failure      200 {object} map[string]interface{} "頻道不存在" example({"state":1,"code":2})
 // @Router       /apis/getchannel/{id} [get]
-func GetChannel(db *mongo.Database) gin.HandlerFunc {
+func GetChannel(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		channelID := c.Param("id")
 		if channelID == "" {
@@ -268,7 +267,7 @@ func GetChannel(db *mongo.Database) gin.HandlerFunc {
 // @Success      200 {object} map[string]interface{} "成功回應"
 // @Failure      200 {object} map[string]interface{} "頻道不存在" example({"state":1,"code":2})
 // @Router       /apis/getchannelinfo/{id} [get]
-func GetChannelInfo(db *mongo.Database) gin.HandlerFunc {
+func GetChannelInfo(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		channelID := c.Param("id")
 		if channelID == "" {
@@ -325,7 +324,7 @@ type SaveChannelRequest struct {
 // @Failure      200 {object} map[string]interface{} "缺少必填欄位" example({"state":1,"code":0})
 // @Failure      200 {object} map[string]interface{} "權限不足" example({"state":1,"code":2})
 // @Router       /apis/savechannel [post]
-func SaveChannel(db *mongo.Database) gin.HandlerFunc {
+func SaveChannel(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req SaveChannelRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -392,7 +391,7 @@ type SetChannelOwnerRequest struct {
 // @Failure      200 {object} map[string]interface{} "缺少必填欄位" example({"state":1,"code":0})
 // @Failure      200 {object} map[string]interface{} "權限不足" example({"state":1,"code":2})
 // @Router       /apis/setchannelowner [post]
-func SetChannelOwner(db *mongo.Database) gin.HandlerFunc {
+func SetChannelOwner(db database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req SetChannelOwnerRequest
 		if err := c.ShouldBindJSON(&req); err != nil {

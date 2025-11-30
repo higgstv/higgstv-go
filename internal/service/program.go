@@ -4,21 +4,19 @@ import (
 	"context"
 	"errors"
 
-	"go.mongodb.org/mongo-driver/bson"
-
+	"github.com/higgstv/higgstv-go/internal/database"
 	"github.com/higgstv/higgstv-go/internal/models"
-	"github.com/higgstv/higgstv-go/internal/repository"
 	"github.com/higgstv/higgstv-go/pkg/youtube"
 )
 
 // ProgramService 節目服務
 type ProgramService struct {
-	programRepo  *repository.ProgramRepository
-	channelRepo *repository.ChannelRepository
+	programRepo  database.ProgramRepository
+	channelRepo database.ChannelRepository
 }
 
 // NewProgramService 建立節目服務
-func NewProgramService(programRepo *repository.ProgramRepository, channelRepo *repository.ChannelRepository) *ProgramService {
+func NewProgramService(programRepo database.ProgramRepository, channelRepo database.ChannelRepository) *ProgramService {
 	return &ProgramService{
 		programRepo:  programRepo,
 		channelRepo: channelRepo,
@@ -47,7 +45,7 @@ func (s *ProgramService) AddProgram(ctx context.Context, channelID string, name,
 	// 如果需要更新頻道封面
 	if updateCover {
 		thumbnailURL := youtube.GetThumbnailURL(youtubeID)
-		update := bson.M{
+		update := map[string]interface{}{
 			"cover.default": thumbnailURL,
 		}
 		if err := s.channelRepo.Update(ctx, channelID, update); err != nil {
@@ -62,7 +60,7 @@ func (s *ProgramService) AddProgram(ctx context.Context, channelID string, name,
 
 // UpdateProgram 更新節目
 func (s *ProgramService) UpdateProgram(ctx context.Context, channelID string, programID int, name, youtubeID, desc string, duration *int, tags []int, updateCover bool) (*models.Program, error) {
-	update := bson.M{}
+	update := make(map[string]interface{})
 
 	if name != "" {
 		update["contents.$.name"] = name
@@ -92,7 +90,7 @@ func (s *ProgramService) UpdateProgram(ctx context.Context, channelID string, pr
 	// 如果需要更新頻道封面
 	if updateCover {
 		thumbnailURL := youtube.GetThumbnailURL(youtubeID)
-		coverUpdate := bson.M{
+		coverUpdate := map[string]interface{}{
 			"cover.default": thumbnailURL,
 		}
 		if err := s.channelRepo.Update(ctx, channelID, coverUpdate); err != nil {

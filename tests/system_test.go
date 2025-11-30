@@ -12,12 +12,12 @@ import (
 
 // TestHealthCheck 測試健康檢查端點
 func TestHealthCheck(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	req, _ := http.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -46,12 +46,12 @@ func TestHealthCheck(t *testing.T) {
 
 // TestReadinessCheck 測試就緒檢查端點
 func TestReadinessCheck(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	req, _ := http.NewRequest("GET", "/ready", nil)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 

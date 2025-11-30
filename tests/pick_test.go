@@ -11,16 +11,16 @@ import (
 
 // TestPickProgramWithYouTubeID 測試 PickProgram 的 youtube_id 參數
 func TestPickProgramWithYouTubeID(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 測試使用 youtube_id 參數
 	req, _ := http.NewRequest("GET", "/apis/pickprog?callback=testCallback&name=Test+Video&youtube_id=dQw4w9WgXcQ&desc=Test+description&duration=300&tags=1,2", nil)
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "testCallback")
@@ -30,10 +30,10 @@ func TestPickProgramWithYouTubeID(t *testing.T) {
 
 // TestPickProgramWithURL 測試 PickProgram 的 url 參數（向後相容）
 func TestPickProgramWithURL(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser2", "test2@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser2", "test2@example.com", "testpass123")
 
 	// 測試使用 url 參數（向後相容）
 	testURL := "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
@@ -41,7 +41,7 @@ func TestPickProgramWithURL(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/apis/pickprog?callback=testCallback&name=Test+Video&url="+encodedURL, nil)
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "testCallback")

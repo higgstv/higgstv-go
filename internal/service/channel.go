@@ -4,21 +4,19 @@ import (
 	"context"
 	"errors"
 
-	"go.mongodb.org/mongo-driver/bson"
-
+	"github.com/higgstv/higgstv-go/internal/database"
 	"github.com/higgstv/higgstv-go/internal/models"
-	"github.com/higgstv/higgstv-go/internal/repository"
 	"github.com/higgstv/higgstv-go/pkg/uuidutil"
 )
 
 // ChannelService 頻道服務
 type ChannelService struct {
-	channelRepo *repository.ChannelRepository
-	userRepo    *repository.UserRepository
+	channelRepo database.ChannelRepository
+	userRepo    database.UserRepository
 }
 
 // NewChannelService 建立頻道服務
-func NewChannelService(channelRepo *repository.ChannelRepository, userRepo *repository.UserRepository) *ChannelService {
+func NewChannelService(channelRepo database.ChannelRepository, userRepo database.UserRepository) *ChannelService {
 	return &ChannelService{
 		channelRepo: channelRepo,
 		userRepo:    userRepo,
@@ -122,7 +120,7 @@ func (s *ChannelService) GetChannel(ctx context.Context, channelID string) (*mod
 
 // UpdateChannel 更新頻道
 func (s *ChannelService) UpdateChannel(ctx context.Context, channelID string, name string, desc string, tags []int) error {
-	update := bson.M{}
+	update := make(map[string]interface{})
 	if name != "" {
 		update["name"] = name
 	}
@@ -141,7 +139,7 @@ func (s *ChannelService) UpdateChannel(ctx context.Context, channelID string, na
 }
 
 // ListChannels 列出頻道
-func (s *ChannelService) ListChannels(ctx context.Context, filter bson.M, sort bson.D, limit, skip int64) ([]models.Channel, error) {
+func (s *ChannelService) ListChannels(ctx context.Context, filter database.Filter, sort database.Sort, limit, skip int64) ([]models.Channel, error) {
 	return s.channelRepo.ListChannels(ctx, filter, sort, limit, skip)
 }
 

@@ -13,10 +13,10 @@ import (
 
 // TestGetChannel 測試取得頻道（獨立測試）
 func TestGetChannel(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 建立頻道
 	channelPayload := map[string]interface{}{
@@ -28,7 +28,7 @@ func TestGetChannel(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
@@ -55,7 +55,7 @@ func TestGetChannel(t *testing.T) {
 	// 測試 1: 無需登入即可取得頻道（公開頻道）
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channelID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -85,7 +85,7 @@ func TestGetChannel(t *testing.T) {
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channelID, nil)
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -96,7 +96,7 @@ func TestGetChannel(t *testing.T) {
 	// 測試 3: 取得不存在的頻道
 	req, _ = http.NewRequest("GET", "/apis/getchannel/nonexistent", nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -108,10 +108,10 @@ func TestGetChannel(t *testing.T) {
 
 // TestGetChannelInfo 測試取得頻道資訊（獨立測試）
 func TestGetChannelInfo(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 建立頻道
 	channelPayload := map[string]interface{}{
@@ -123,7 +123,7 @@ func TestGetChannelInfo(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
@@ -150,7 +150,7 @@ func TestGetChannelInfo(t *testing.T) {
 	// 測試 1: 需要登入才能取得頻道資訊
 	req, _ = http.NewRequest("GET", "/apis/getchannelinfo/"+channelID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	// 應該回傳需要登入的錯誤
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -164,7 +164,7 @@ func TestGetChannelInfo(t *testing.T) {
 	req, _ = http.NewRequest("GET", "/apis/getchannelinfo/"+channelID, nil)
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -201,10 +201,10 @@ func TestGetChannelInfo(t *testing.T) {
 
 // TestSaveChannel 測試儲存頻道功能
 func TestSaveChannel(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 建立頻道
 	channelPayload := map[string]interface{}{
@@ -216,7 +216,7 @@ func TestSaveChannel(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
@@ -252,7 +252,7 @@ func TestSaveChannel(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -264,7 +264,7 @@ func TestSaveChannel(t *testing.T) {
 	// 驗證頻道已更新
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channelID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
@@ -305,7 +305,7 @@ func TestSaveChannel(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -314,7 +314,7 @@ func TestSaveChannel(t *testing.T) {
 	assert.Equal(t, float64(0), response["state"])
 
 	// 測試 3: 無權限更新（使用其他使用者的頻道）
-	cookie2 := getAuthCookie(t, testRouter, "testuser2", "test2@example.com", "testpass123")
+	cookie2 := getAuthCookie(t, ctx, "testuser2", "test2@example.com", "testpass123")
 
 	// 建立第二個使用者的頻道
 	channelPayload2 := map[string]interface{}{
@@ -326,7 +326,7 @@ func TestSaveChannel(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie2)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp2 map[string]interface{}
@@ -355,7 +355,7 @@ func TestSaveChannel(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie) // 使用第一個使用者的 cookie
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -374,7 +374,7 @@ func TestSaveChannel(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -386,8 +386,8 @@ func TestSaveChannel(t *testing.T) {
 
 // TestAddChannel 測試新增頻道（需要登入）
 func TestAddChannel(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	// 先註冊並登入
 	signupPayload := map[string]interface{}{
@@ -400,7 +400,7 @@ func TestAddChannel(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/apis/signup", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	// 取得 Cookie
 	cookie := w.Header().Get("Set-Cookie")
@@ -416,7 +416,7 @@ func TestAddChannel(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -436,10 +436,10 @@ func TestAddChannel(t *testing.T) {
 
 // TestGetOwnChannelsWithQueryParams 測試 GetOwnChannels 的 q 和 types[] 參數
 func TestGetOwnChannelsWithQueryParams(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 建立多個頻道
 	channels := []map[string]interface{}{
@@ -454,7 +454,7 @@ func TestGetOwnChannelsWithQueryParams(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Cookie", cookie)
 		w := httptest.NewRecorder()
-		testRouter.ServeHTTP(w, req)
+		ctx.Router.ServeHTTP(w, req)
 		require.Equal(t, http.StatusOK, w.Code)
 	}
 
@@ -462,7 +462,7 @@ func TestGetOwnChannelsWithQueryParams(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/apis/getownchannels?q=Music", nil)
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
@@ -496,11 +496,11 @@ func TestGetOwnChannelsWithQueryParams(t *testing.T) {
 
 // TestGetChannelsWithAllQueryParams 測試 GetChannels 的完整 query 參數
 func TestGetChannelsWithAllQueryParams(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	// 建立使用者
-	cookie1 := getAuthCookie(t, testRouter, "user1", "user1@example.com", "pass123")
+	cookie1 := getAuthCookie(t, ctx, "user1", "user1@example.com", "pass123")
 
 	// user1 建立頻道
 	channelPayload := map[string]interface{}{
@@ -512,13 +512,13 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie1)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	// 測試 user 參數
 	req, _ = http.NewRequest("GET", "/apis/getchannels?user=user1", nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
@@ -545,7 +545,7 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 	// 測試 q 參數（關鍵字搜尋）
 	req, _ = http.NewRequest("GET", "/apis/getchannels?q=User1", nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	err = json.Unmarshal(w.Body.Bytes(), &response)
@@ -555,7 +555,7 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 	// 測試 has_contents 參數
 	req, _ = http.NewRequest("GET", "/apis/getchannels?has_contents=1", nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	err = json.Unmarshal(w.Body.Bytes(), &response)
@@ -565,7 +565,7 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 	// 測試 ignore_types 參數
 	req, _ = http.NewRequest("GET", "/apis/getchannels?ignore_types=unclassified", nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	err = json.Unmarshal(w.Body.Bytes(), &response)
@@ -575,7 +575,7 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 	// 測試 start 和 desc 參數
 	req, _ = http.NewRequest("GET", "/apis/getchannels?start=0&desc=1&sort=last_modified", nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	err = json.Unmarshal(w.Body.Bytes(), &response)
@@ -585,12 +585,12 @@ func TestGetChannelsWithAllQueryParams(t *testing.T) {
 
 // TestSetChannelOwnerWithEmail 測試 SetChannelOwner 的 email 參數
 func TestSetChannelOwnerWithEmail(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
 	// 建立兩個使用者
-	cookie1 := getAuthCookie(t, testRouter, "owner1", "owner1@example.com", "pass123")
-	_ = getAuthCookie(t, testRouter, "owner2", "owner2@example.com", "pass123") // 建立第二個使用者
+	cookie1 := getAuthCookie(t, ctx, "owner1", "owner1@example.com", "pass123")
+	_ = getAuthCookie(t, ctx, "owner2", "owner2@example.com", "pass123") // 建立第二個使用者
 
 	// owner1 建立頻道
 	channelPayload := map[string]interface{}{
@@ -602,7 +602,7 @@ func TestSetChannelOwnerWithEmail(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie1)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
@@ -637,7 +637,7 @@ func TestSetChannelOwnerWithEmail(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie1)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
@@ -649,7 +649,7 @@ func TestSetChannelOwnerWithEmail(t *testing.T) {
 	req, _ = http.NewRequest("GET", "/apis/getchannelinfo/"+channelID, nil)
 	req.Header.Set("Cookie", cookie1)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	err = json.Unmarshal(w.Body.Bytes(), &response)

@@ -13,10 +13,10 @@ import (
 
 // TestSaveProgram 測試儲存節目功能
 func TestSaveProgram(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 建立頻道
 	channelPayload := map[string]interface{}{
@@ -28,7 +28,7 @@ func TestSaveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
@@ -66,7 +66,7 @@ func TestSaveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var addProgramResp map[string]interface{}
@@ -102,7 +102,7 @@ func TestSaveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -145,7 +145,7 @@ func TestSaveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -156,7 +156,7 @@ func TestSaveProgram(t *testing.T) {
 	// 驗證頻道封面已更新
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channelID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
@@ -189,10 +189,10 @@ func TestSaveProgram(t *testing.T) {
 
 // TestDeleteProgram 測試刪除節目
 func TestDeleteProgram(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 建立頻道
 	channelPayload := map[string]interface{}{
@@ -204,7 +204,7 @@ func TestDeleteProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
@@ -244,7 +244,7 @@ func TestDeleteProgram(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Cookie", cookie)
 		w = httptest.NewRecorder()
-		testRouter.ServeHTTP(w, req)
+		ctx.Router.ServeHTTP(w, req)
 		require.Equal(t, http.StatusOK, w.Code)
 
 		var addProgramResp map[string]interface{}
@@ -276,19 +276,29 @@ func TestDeleteProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
- err = json.Unmarshal(w.Body.Bytes(), &response)
- require.NoError(t, err)
-	assert.Equal(t, float64(0), response["state"])
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	
+	// 如果刪除失敗，輸出詳細錯誤信息
+	if response["state"] != float64(0) {
+		t.Logf("Delete failed: response = %+v", response)
+		t.Logf("Request payload: %+v", deletePayload)
+		t.Logf("Program IDs: %+v", programIDs)
+		if code, ok := response["code"]; ok {
+			t.Logf("Error code: %v", code)
+		}
+	}
+	assert.Equal(t, float64(0), response["state"], "Delete operation should succeed")
 
 	// 驗證節目已刪除
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channelID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
@@ -322,7 +332,7 @@ func TestDeleteProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -333,7 +343,7 @@ func TestDeleteProgram(t *testing.T) {
 	// 驗證所有節目已刪除
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channelID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	err = json.Unmarshal(w.Body.Bytes(), &channelResponse)
@@ -357,7 +367,7 @@ func TestDeleteProgram(t *testing.T) {
 	}
 
 	// 測試 3: 無權限刪除（使用其他使用者的頻道）
-	cookie2 := getAuthCookie(t, testRouter, "testuser2", "test2@example.com", "testpass123")
+	cookie2 := getAuthCookie(t, ctx, "testuser2", "test2@example.com", "testpass123")
 
 	// 建立第二個使用者的頻道
 	channelPayload2 := map[string]interface{}{
@@ -369,7 +379,7 @@ func TestDeleteProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie2)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp2 map[string]interface{}
@@ -398,7 +408,7 @@ func TestDeleteProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie) // 使用第一個使用者的 cookie
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -410,10 +420,10 @@ func TestDeleteProgram(t *testing.T) {
 
 // TestMoveProgram 測試移動節目功能
 func TestMoveProgram(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 建立兩個頻道
 	channel1Payload := map[string]interface{}{
@@ -425,7 +435,7 @@ func TestMoveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channel1Resp map[string]interface{}
@@ -453,7 +463,7 @@ func TestMoveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channel2Resp map[string]interface{}
@@ -488,7 +498,7 @@ func TestMoveProgram(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Cookie", cookie)
 		w = httptest.NewRecorder()
-		testRouter.ServeHTTP(w, req)
+		ctx.Router.ServeHTTP(w, req)
 		require.Equal(t, http.StatusOK, w.Code)
 
 		var addProgramResp map[string]interface{}
@@ -520,7 +530,7 @@ func TestMoveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -532,7 +542,7 @@ func TestMoveProgram(t *testing.T) {
 	// 驗證節目已移動
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channel1ID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channel1Response map[string]interface{}
@@ -555,7 +565,7 @@ func TestMoveProgram(t *testing.T) {
 	// 驗證目標頻道有節目
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channel2ID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channel2Response map[string]interface{}
@@ -586,7 +596,7 @@ func TestMoveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -597,7 +607,7 @@ func TestMoveProgram(t *testing.T) {
 	// 驗證所有節目已移動
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channel1ID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	err = json.Unmarshal(w.Body.Bytes(), &channel1Response)
@@ -617,7 +627,7 @@ func TestMoveProgram(t *testing.T) {
 	}
 
 	// 測試 3: 無權限移動（來源頻道無權限）
-	cookie2 := getAuthCookie(t, testRouter, "testuser2", "test2@example.com", "testpass123")
+	cookie2 := getAuthCookie(t, ctx, "testuser2", "test2@example.com", "testpass123")
 
 	// 建立第二個使用者的頻道
 	channel3Payload := map[string]interface{}{
@@ -629,7 +639,7 @@ func TestMoveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie2)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channel3Resp map[string]interface{}
@@ -659,7 +669,7 @@ func TestMoveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie) // 使用第一個使用者的 cookie
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -679,7 +689,7 @@ func TestMoveProgram(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie) // 使用第一個使用者的 cookie
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -691,10 +701,10 @@ func TestMoveProgram(t *testing.T) {
 
 // TestSaveProgramOrder 測試儲存節目順序功能
 func TestSaveProgramOrder(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 建立頻道
 	channelPayload := map[string]interface{}{
@@ -706,7 +716,7 @@ func TestSaveProgramOrder(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
@@ -746,7 +756,7 @@ func TestSaveProgramOrder(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Cookie", cookie)
 		w = httptest.NewRecorder()
-		testRouter.ServeHTTP(w, req)
+		ctx.Router.ServeHTTP(w, req)
 		require.Equal(t, http.StatusOK, w.Code)
 
 		var addProgramResp map[string]interface{}
@@ -779,7 +789,7 @@ func TestSaveProgramOrder(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -791,7 +801,7 @@ func TestSaveProgramOrder(t *testing.T) {
 	// 驗證順序已更新
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channelID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
@@ -820,7 +830,7 @@ func TestSaveProgramOrder(t *testing.T) {
 	}
 
 	// 測試 2: 無權限更新順序（使用其他使用者的頻道）
-	cookie2 := getAuthCookie(t, testRouter, "testuser2", "test2@example.com", "testpass123")
+	cookie2 := getAuthCookie(t, ctx, "testuser2", "test2@example.com", "testpass123")
 
 	// 建立第二個使用者的頻道
 	channelPayload2 := map[string]interface{}{
@@ -832,7 +842,7 @@ func TestSaveProgramOrder(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie2)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp2 map[string]interface{}
@@ -861,7 +871,7 @@ func TestSaveProgramOrder(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie) // 使用第一個使用者的 cookie
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -880,7 +890,7 @@ func TestSaveProgramOrder(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -892,10 +902,10 @@ func TestSaveProgramOrder(t *testing.T) {
 
 // TestAddProgramWithUpdateCover 測試新增節目並更新頻道封面
 func TestAddProgramWithUpdateCover(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser", "test@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser", "test@example.com", "testpass123")
 
 	// 先建立頻道
 	channelPayload := map[string]interface{}{
@@ -907,7 +917,7 @@ func TestAddProgramWithUpdateCover(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
@@ -946,7 +956,7 @@ func TestAddProgramWithUpdateCover(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -966,7 +976,7 @@ func TestAddProgramWithUpdateCover(t *testing.T) {
 	// 驗證頻道封面已更新
 	req, _ = http.NewRequest("GET", "/apis/getchannel/"+channelID, nil)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResponse map[string]interface{}
@@ -1006,10 +1016,10 @@ func TestAddProgramWithUpdateCover(t *testing.T) {
 
 // TestAddProgramWithoutUpdateCover 測試新增節目但不更新封面
 func TestAddProgramWithoutUpdateCover(t *testing.T) {
-	SetupTestDB(t)
-	defer CleanupTestDB(t)
+	ctx := SetupTestDB(t)
+	defer CleanupTestDB(t, ctx)
 
-	cookie := getAuthCookie(t, testRouter, "testuser3", "test3@example.com", "testpass123")
+	cookie := getAuthCookie(t, ctx, "testuser3", "test3@example.com", "testpass123")
 
 	// 建立頻道
 	channelPayload := map[string]interface{}{
@@ -1021,7 +1031,7 @@ func TestAddProgramWithoutUpdateCover(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w := httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var channelResp map[string]interface{}
@@ -1060,7 +1070,7 @@ func TestAddProgramWithoutUpdateCover(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", cookie)
 	w = httptest.NewRecorder()
-	testRouter.ServeHTTP(w, req)
+	ctx.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]interface{}
