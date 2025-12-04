@@ -30,12 +30,6 @@ type MigrationStats struct {
 	Errors     []string
 }
 
-// UUIDMapping UUID 映射表（MongoDB UUID -> SQLite ID）
-type UUIDMapping struct {
-	mongoUUID string // MongoDB 中的 UUID（各種格式）
-	sqliteID  string // SQLite 中的 ID
-}
-
 func main() {
 	fmt.Println("🔄 MongoDB 到 SQLite 資料遷移工具")
 	fmt.Println("=====================================")

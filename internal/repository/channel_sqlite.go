@@ -562,39 +562,13 @@ func (r *SQLiteChannelRepository) loadPrograms(ctx context.Context, channelID st
 	return programs, nil
 }
 
-// 輔助方法：載入 program tags（單個節目）
-func (r *SQLiteChannelRepository) loadProgramTags(ctx context.Context, programID int) ([]int, error) {
-	db := r.getDB()
-	query := `SELECT tag FROM program_tags WHERE program_id = ? ORDER BY tag`
-
-	rows, err := db.QueryContext(ctx, query, programID)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = rows.Close()
-	}()
-
-	var tags []int
-	for rows.Next() {
-		var tag int
-		if err := rows.Scan(&tag); err != nil {
-			return nil, err
-		}
-		tags = append(tags, tag)
-	}
-
-	return tags, rows.Err()
-}
-
-// 輔助方法：批量載入多個節目的 tags
+// 輔助方法：批量載入 program tags
 func (r *SQLiteChannelRepository) loadProgramTagsBatch(ctx context.Context, programIDs []int) (map[int][]int, error) {
 	if len(programIDs) == 0 {
 		return make(map[int][]int), nil
 	}
 
 	db := r.getDB()
-	// 建立 IN 查詢的佔位符
 	placeholders := make([]string, len(programIDs))
 	args := make([]interface{}, len(programIDs))
 	for i, id := range programIDs {
@@ -602,8 +576,10 @@ func (r *SQLiteChannelRepository) loadProgramTagsBatch(ctx context.Context, prog
 		args[i] = id
 	}
 
-	query := fmt.Sprintf(`SELECT program_id, tag FROM program_tags WHERE program_id IN (%s) ORDER BY program_id, tag`,
-		strings.Join(placeholders, ","))
+	query := fmt.Sprintf(
+		`SELECT program_id, tag FROM program_tags WHERE program_id IN (%s) ORDER BY program_id, tag`,
+		strings.Join(placeholders, ","),
+	)
 
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {

@@ -377,15 +377,3 @@ func (r *SQLiteProgramRepository) insertProgramTagsTx(ctx context.Context, tx *s
 	}
 	return nil
 }
-
-// 輔助方法：插入 program tags
-func (r *SQLiteProgramRepository) insertProgramTags(ctx context.Context, programID int, tags []int) error {
-	db := r.getDB()
-	query := `INSERT INTO program_tags (program_id, tag) VALUES (?, ?)`
-	for _, tag := range tags {
-		if _, err := db.ExecContext(ctx, query, programID, tag); err != nil {
-			return err
-		}
-	}
-	return nil
-}
