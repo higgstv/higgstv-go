@@ -36,8 +36,7 @@ higgstv-go/
 │   └── youtube/             # YouTube 相關工具
 ├── tests/                   # 測試檔案
 ├── config/                  # 配置檔案
-│   ├── config.yaml          # 預設配置
-│   └── config.example.yaml  # 配置範例
+│   └── config.example.yaml  # 配置範例（複製為 config.yaml 使用）
 ├── Dockerfile               # Docker 建置檔
 ├── docker-compose.yml       # Docker Compose 配置
 ├── Makefile                 # 建置腳本
@@ -294,11 +293,13 @@ docker-compose -f docker-compose.mongodb.yml down
 
 ### Phase 5：多資料庫支援 ✅
 - [x] 資料庫抽象層設計
-- [x] SQLite 完整支援
+- [x] SQLite 完整支援（預設資料庫）
 - [x] MongoDB 和 SQLite 並存
-- [x] 資料遷移工具
+- [x] 資料遷移工具（MongoDB → SQLite）
 - [x] 測試隔離機制
 - [x] 完整的文檔說明
+- [x] SQLite 效能優化（批量載入、交易優化）
+- [x] 所有 API 測試通過（24 個測試）
 
 ## 監控與指標
 
@@ -330,29 +331,6 @@ docker-compose -f docker-compose.mongodb.yml down
 - **測試**: testify
 - **監控**: Prometheus
 - **CI/CD**: GitHub Actions
-
-## 資料庫支援
-
-### MongoDB
-- 完整的 MongoDB 支援
-- 支援 UUID binary 和字串兩種格式
-- 自動建立索引
-- 交易支援
-
-### SQLite
-- 完整的 SQLite 支援
-- 自動建立資料庫結構
-- 外鍵約束支援
-- 交易支援
-- 適合開發和測試環境
-
-### 資料遷移
-提供 MongoDB 到 SQLite 的遷移工具：
-```bash
-go run cmd/migrate/migrate_mongodb_to_sqlite.go [sqlite_path]
-```
-
-詳細說明請參考 `docs/DATA_MIGRATION_GUIDE.md`。
 
 ## 資料庫支援
 

@@ -9,6 +9,7 @@
 - ✅ **資料遷移工具**：MongoDB 到 SQLite 的完整遷移工具 (`cmd/migrate/migrate_mongodb_to_sqlite.go`)
 - ✅ **資料庫檢查工具**：統一的資料庫檢查工具 (`cmd/check_database/check_database.go`)
 - ✅ **測試隔離機制**：每個測試使用獨立的資料庫連線，避免資料殘留
+- ✅ **完整測試覆蓋**：所有 24 個測試通過，100% API 端點覆蓋率
 - ✅ 健康檢查端點 (`/health`, `/ready`)
 - ✅ Rate Limiting 中介層
 - ✅ Request ID 追蹤
@@ -22,6 +23,8 @@
 - ✅ **測試系統重構**：使用 `TestDBContext` 確保每個測試有獨立的資料庫連線
 - ✅ **Repository 層重構**：使用資料庫抽象介面，支援多種資料庫
 - ✅ **Service 層更新**：移除 MongoDB 特定類型（bson.M, bson.D），改用通用介面
+- ✅ **預設資料庫變更**：SQLite 設為預設資料庫（取代 MongoDB）
+- ✅ **SQLite 效能優化**：批量載入程式標籤、交易優化、連線池配置
 - ✅ 改進錯誤處理機制
 - ✅ 增強日誌記錄（包含 Request ID）
 - ✅ 優化資料庫連線配置（支援 MongoDB 和 SQLite）
@@ -31,6 +34,10 @@
 - ✅ 修正 `DeletePrograms` 在 MongoDB 中的實作錯誤
 - ✅ 修正多個 linter 錯誤（未檢查的錯誤返回值、空分支等）
 - ✅ 修正 `cmd` 目錄結構（多個 main 函數問題）
+- ✅ 修正 SQLite `contents_seq` 類型轉換問題（CAST AS TEXT）
+- ✅ 修正 SQLite `ListChannels` 的 MongoDB 風格過濾器支援（`$nin`, `$regex`, `$exists`）
+- ✅ 修正 SQLite 交易死鎖問題（`GetNextProgramID` 接受可選 `*sql.Tx` 參數）
+- ✅ 修正 SQLite 配置優先順序問題（`config.yaml` 優先於環境變數）
 
 ### Security
 - ✅ 新增 JSONP callback 參數驗證

@@ -5,10 +5,6 @@
 
 ## 核心文檔
 
-### API 文檔
-- **API_REFERENCE.md** (位於專案根目錄 `docs/`) - 完整的 API 參考文件
-- **GOLANG_IMPLEMENTATION_GUIDE.md** (位於專案根目錄 `docs/`) - Golang 實作指南
-
 ### API 符合度
 - **API_COMPLIANCE_AUDIT.md** - API 實作符合度深度審計報告
   - 詳細的 API 端點符合度檢查
@@ -137,8 +133,7 @@ docs/
 ## 快速查找
 
 ### 我需要了解...
-- **API 端點規範** → `API_REFERENCE.md` (專案根目錄)
-- **如何實作新功能** → `GOLANG_IMPLEMENTATION_GUIDE.md` (專案根目錄)
+- **API 端點規範** → Swagger 文檔 (`swagger/swagger.yaml`) 或 `API_COMPLIANCE_AUDIT.md`
 - **測試覆蓋率** → `COMPLETE_TEST_SUMMARY.md`
 - **如何執行測試** → `TESTING_GUIDE.md`（完整指南）或 `TESTING.md`（快速指南）
 - **如何部署** → `DEPLOYMENT.md`
@@ -160,4 +155,6 @@ docs/
 - **2025-11-30**: 更新所有文件中的工具路徑（cmd/migrate/, cmd/check_database/）
 - **2025-11-30**: 更新 MIGRATION.md 以支援 MongoDB 和 SQLite
 - **2025-11-30**: 新增 SQLite 相關文件索引
+- **2025-12-04**: 更新 COMPLETE_TEST_SUMMARY.md（測試數量從 21 更新為 24）
+- **2025-12-04**: 更新 CHANGELOG.md（加入最新修復和變更）
 
