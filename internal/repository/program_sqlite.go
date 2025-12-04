@@ -27,19 +27,8 @@ func (r *SQLiteProgramRepository) getDB() *sql.DB {
 	return sqliteDB.GetDB()
 }
 
-// GetNextProgramID 取得下一個節目 ID（使用 counter collection）
-func (r *SQLiteProgramRepository) GetNextProgramID(ctx context.Context) (int, error) {
-	db := r.getDB()
-
-	// 開始交易
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return 0, err
-	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
-
+// getNextProgramIDTx 在交易中取得下一個節目 ID（內部方法）
+func (r *SQLiteProgramRepository) getNextProgramIDTx(ctx context.Context, tx *sql.Tx) (int, error) {
 	// 更新計數器
 	query := `UPDATE counters SET seq = seq + 1 WHERE id = 'program_id'`
 	result, err := tx.ExecContext(ctx, query)
@@ -68,6 +57,27 @@ func (r *SQLiteProgramRepository) GetNextProgramID(ctx context.Context) (int, er
 		}
 	}
 
+	return seq, nil
+}
+
+// GetNextProgramID 取得下一個節目 ID（使用 counter collection）
+func (r *SQLiteProgramRepository) GetNextProgramID(ctx context.Context) (int, error) {
+	db := r.getDB()
+
+	// 開始交易
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	seq, err := r.getNextProgramIDTx(ctx, tx)
+	if err != nil {
+		return 0, err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return 0, err
 	}
@@ -88,8 +98,8 @@ func (r *SQLiteProgramRepository) AddProgram(ctx context.Context, channelID stri
 		_ = tx.Rollback()
 	}()
 
-	// 取得下一個節目 ID
-	programID, err := r.GetNextProgramID(ctx)
+	// 取得下一個節目 ID（使用同一個交易）
+	programID, err := r.getNextProgramIDTx(ctx, tx)
 	if err != nil {
 		return err
 	}
@@ -132,7 +142,88 @@ func (r *SQLiteProgramRepository) AddProgram(ctx context.Context, channelID stri
 }
 
 // MigrateProgram 遷移節目（保留原有 ID，用於資料遷移）
-func (r *SQLiteProgramRepository) MigrateProgram(ctx context.Context, channelID string, program *models.Program) error {
+// 返回值：(是否實際插入了新節目, 錯誤)
+func (r *SQLiteProgramRepository) MigrateProgram(ctx context.Context, channelID string, program *models.Program) (bool, error) {
+	db := r.getDB()
+
+	// 開始交易
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	// 檢查節目是否已存在
+	var existingID int
+	var existingChannelID string
+	err = tx.QueryRowContext(ctx, "SELECT id, channel_id FROM programs WHERE id = ?", program.ID).Scan(&existingID, &existingChannelID)
+	inserted := false
+	if err == nil {
+		// 節目已存在，檢查是否屬於同一個頻道
+		if existingChannelID == channelID {
+			// 同一個頻道的同一個節目，跳過（可能是重複遷移）
+			// 但仍需要確保 tags 正確
+			if _, err := tx.ExecContext(ctx, "DELETE FROM program_tags WHERE program_id = ?", program.ID); err != nil {
+				return false, err
+			}
+		} else {
+			// 不同頻道的相同節目 ID，這不應該發生，但我們跳過以避免衝突
+			// 記錄警告但繼續
+			return false, fmt.Errorf("program %d already exists in channel %s, cannot add to channel %s", program.ID, existingChannelID, channelID)
+		}
+	} else if err != sql.ErrNoRows {
+		return false, err
+	} else {
+		// 節目不存在，插入新節目（保留原有 ID）
+		query := `INSERT INTO programs (id, channel_id, name, desc, duration, type, youtube_id, created, last_modified)
+		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
+		result, err := tx.ExecContext(ctx, query,
+			program.ID,
+			channelID,
+			program.Name,
+			program.Desc,
+			program.Duration,
+			program.Type,
+			program.YouTubeID,
+			program.Created,
+			program.LastModified,
+		)
+		if err != nil {
+			return false, err
+		}
+		
+		// 檢查是否實際插入了行
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return false, err
+		}
+		inserted = rowsAffected > 0
+	}
+
+	// 插入 tags
+	if len(program.Tags) > 0 {
+		if err := r.insertProgramTagsTx(ctx, tx, program.ID, program.Tags); err != nil {
+			return false, err
+		}
+	}
+
+	// 更新頻道的 last_modified
+	if _, err := tx.ExecContext(ctx, "UPDATE channels SET last_modified = ? WHERE id = ?", time.Now(), channelID); err != nil {
+		return false, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+
+	return inserted, nil
+}
+
+// UpdateProgram 更新節目
+func (r *SQLiteProgramRepository) UpdateProgram(ctx context.Context, channelID string, programID int, update map[string]interface{}) error {
 	db := r.getDB()
 
 	// 開始交易
@@ -144,28 +235,35 @@ func (r *SQLiteProgramRepository) MigrateProgram(ctx context.Context, channelID 
 		_ = tx.Rollback()
 	}()
 
-	// 插入節目（保留原有 ID）
-	query := `INSERT INTO programs (id, channel_id, name, desc, duration, type, youtube_id, created, last_modified)
-	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	// 建立 UPDATE 語句
+	setParts := []string{"last_modified = ?"}
+	args := []interface{}{time.Now()}
 
-	_, err = tx.ExecContext(ctx, query,
-		program.ID,
-		channelID,
-		program.Name,
-		program.Desc,
-		program.Duration,
-		program.Type,
-		program.YouTubeID,
-		program.Created,
-		program.LastModified,
-	)
-	if err != nil {
-		return err
+	for key, value := range update {
+		// 處理 contents.$ 前綴（SQLite 中不需要）
+		key = strings.TrimPrefix(key, "contents.$.")
+
+		if key == "tags" {
+			// 刪除舊的 tags 並插入新的（在交易中）
+			if _, err := tx.ExecContext(ctx, "DELETE FROM program_tags WHERE program_id = ?", programID); err != nil {
+				return err
+			}
+			if tags, ok := value.([]int); ok {
+				if err := r.insertProgramTagsTx(ctx, tx, programID, tags); err != nil {
+					return err
+				}
+			}
+		} else {
+			setParts = append(setParts, fmt.Sprintf("%s = ?", key))
+			args = append(args, value)
+		}
 	}
 
-	// 插入 tags
-	if len(program.Tags) > 0 {
-		if err := r.insertProgramTagsTx(ctx, tx, program.ID, program.Tags); err != nil {
+	if len(setParts) > 1 {
+		// 更新節目
+		query := fmt.Sprintf("UPDATE programs SET %s WHERE id = ? AND channel_id = ?", strings.Join(setParts, ", "))
+		args = append(args, programID, channelID)
+		if _, err := tx.ExecContext(ctx, query, args...); err != nil {
 			return err
 		}
 	}
@@ -176,51 +274,6 @@ func (r *SQLiteProgramRepository) MigrateProgram(ctx context.Context, channelID 
 	}
 
 	return tx.Commit()
-}
-
-// UpdateProgram 更新節目
-func (r *SQLiteProgramRepository) UpdateProgram(ctx context.Context, channelID string, programID int, update map[string]interface{}) error {
-	db := r.getDB()
-
-	// 建立 UPDATE 語句
-	setParts := []string{"last_modified = ?"}
-	args := []interface{}{time.Now()}
-
-	for key, value := range update {
-		// 處理 contents.$ 前綴（SQLite 中不需要）
-		key = strings.TrimPrefix(key, "contents.$.")
-
-		if key == "tags" {
-			// 刪除舊的 tags 並插入新的
-			if _, err := db.ExecContext(ctx, "DELETE FROM program_tags WHERE program_id = ?", programID); err != nil {
-				return err
-			}
-			if tags, ok := value.([]int); ok {
-				if err := r.insertProgramTags(ctx, programID, tags); err != nil {
-					return err
-				}
-			}
-		} else {
-			setParts = append(setParts, fmt.Sprintf("%s = ?", key))
-			args = append(args, value)
-		}
-	}
-
-	if len(setParts) == 1 {
-		// 只有 last_modified，不需要更新
-		return nil
-	}
-
-	query := fmt.Sprintf("UPDATE programs SET %s WHERE id = ? AND channel_id = ?", strings.Join(setParts, ", "))
-	args = append(args, programID, channelID)
-
-	// 更新頻道的 last_modified
-	if _, err := db.ExecContext(ctx, "UPDATE channels SET last_modified = ? WHERE id = ?", time.Now(), channelID); err != nil {
-		return err
-	}
-
-	_, err := db.ExecContext(ctx, query, args...)
-	return err
 }
 
 // DeletePrograms 刪除節目
@@ -295,8 +348,8 @@ func (r *SQLiteProgramRepository) SetOrder(ctx context.Context, channelID string
 		return err
 	}
 
-	// 插入新的順序
-	query := `INSERT INTO channel_program_order (channel_id, program_id, order_index) VALUES (?, ?, ?)`
+	// 插入新的順序（使用 INSERT OR IGNORE 處理重複）
+	query := `INSERT OR IGNORE INTO channel_program_order (channel_id, program_id, order_index) VALUES (?, ?, ?)`
 	for i, programID := range order {
 		if _, err := tx.ExecContext(ctx, query, channelID, programID, i); err != nil {
 			return err
@@ -316,7 +369,7 @@ func (r *SQLiteProgramRepository) insertProgramTagsTx(ctx context.Context, tx *s
 	if len(tags) == 0 {
 		return nil
 	}
-	query := `INSERT INTO program_tags (program_id, tag) VALUES (?, ?)`
+	query := `INSERT OR IGNORE INTO program_tags (program_id, tag) VALUES (?, ?)`
 	for _, tag := range tags {
 		if _, err := tx.ExecContext(ctx, query, programID, tag); err != nil {
 			return err

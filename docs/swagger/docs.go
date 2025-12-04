@@ -801,7 +801,7 @@ const docTemplate = `{
         },
         "/health": {
             "get": {
-                "description": "檢查伺服器和資料庫連線狀態",
+                "description": "檢查伺服器和資料庫連線狀態（支援 MongoDB 和 SQLite）",
                 "produces": [
                     "application/json"
                 ],
@@ -822,7 +822,7 @@ const docTemplate = `{
         },
         "/ready": {
             "get": {
-                "description": "檢查服務是否準備好接受請求（包含資料庫查詢測試）",
+                "description": "檢查服務是否準備好接受請求（包含資料庫查詢測試，支援 MongoDB 和 SQLite）",
                 "produces": [
                     "application/json"
                 ],

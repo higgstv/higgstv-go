@@ -54,8 +54,8 @@ func Load() (*Config, error) {
 	// 預設值
 	viper.SetDefault("server.port", "8080")
 	viper.SetDefault("server.env", "development")
-	viper.SetDefault("database.type", "mongodb")
-	viper.SetDefault("database.uri", "mongodb://localhost:27017")
+	viper.SetDefault("database.type", "sqlite")
+	viper.SetDefault("database.uri", "file:./data/higgstv.db?cache=shared&mode=rwc")
 	viper.SetDefault("database.database", "higgstv")
 	viper.SetDefault("session.secret", "change-me-in-production")
 

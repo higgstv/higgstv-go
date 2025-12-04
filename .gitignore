@@ -42,6 +42,9 @@ Thumbs.db
 config/config.yaml
 config/config.local.yaml
 
+# Database files (SQLite)
+data/
+
 # Logs
 *.log
 

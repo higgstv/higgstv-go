@@ -486,70 +486,72 @@ func (c *SQLiteCollection) findMigrations(ctx context.Context, filter Filter, so
 
 // insertMigration 插入 migration 記錄
 func (c *SQLiteCollection) insertMigration(ctx context.Context, document interface{}) error {
-	// 使用反射取得欄位值
-	docValue := reflect.ValueOf(document)
-	if docValue.Kind() == reflect.Ptr {
-		docValue = docValue.Elem()
-	}
-
 	var id, description string
 	var executedAt time.Time
 
-	docType := docValue.Type()
-	for i := 0; i < docValue.NumField(); i++ {
-		field := docValue.Field(i)
-		fieldType := docType.Field(i)
-
-		// 處理 bson tag 或 json tag
-		bsonTag := fieldType.Tag.Get("bson")
-		if bsonTag == "" {
-			bsonTag = fieldType.Tag.Get("json")
-		}
-
-		switch bsonTag {
-		case "_id", "id":
-			if field.Kind() == reflect.String {
-				id = field.String()
-			} else if field.Kind() == reflect.Interface {
-				if str, ok := field.Interface().(string); ok {
-					id = str
-				}
-			}
-		case "description":
-			if field.Kind() == reflect.String {
-				description = field.String()
-			} else if field.Kind() == reflect.Interface {
-				if str, ok := field.Interface().(string); ok {
-					description = str
-				}
-			}
-		case "executed_at":
-			if field.Type() == reflect.TypeOf(time.Time{}) {
-				executedAt = field.Interface().(time.Time)
-			} else if field.Kind() == reflect.Interface {
-				if t, ok := field.Interface().(time.Time); ok {
-					executedAt = t
-				}
+	// 先檢查是否為 map 類型
+	if docMap, ok := document.(map[string]interface{}); ok {
+		// 從 map 取得值
+		if idVal, ok := docMap["_id"]; ok {
+			if idStr, ok := idVal.(string); ok {
+				id = idStr
 			}
 		}
-	}
+		if descVal, ok := docMap["description"]; ok {
+			if descStr, ok := descVal.(string); ok {
+				description = descStr
+			}
+		}
+		if execVal, ok := docMap["executed_at"]; ok {
+			if execTime, ok := execVal.(time.Time); ok {
+				executedAt = execTime
+			}
+		}
+	} else {
+		// 使用反射取得欄位值（struct 類型）
+		docValue := reflect.ValueOf(document)
+		if docValue.Kind() == reflect.Ptr {
+			docValue = docValue.Elem()
+		}
 
-	// 如果無法從反射取得，嘗試從 map 取得
-	if id == "" {
-		if docMap, ok := document.(map[string]interface{}); ok {
-			if idVal, ok := docMap["_id"]; ok {
-				if idStr, ok := idVal.(string); ok {
-					id = idStr
+		// 只有當是 struct 類型時才使用反射
+		if docValue.Kind() == reflect.Struct {
+			docType := docValue.Type()
+			for i := 0; i < docValue.NumField(); i++ {
+				field := docValue.Field(i)
+				fieldType := docType.Field(i)
+
+				// 處理 bson tag 或 json tag
+				bsonTag := fieldType.Tag.Get("bson")
+				if bsonTag == "" {
+					bsonTag = fieldType.Tag.Get("json")
 				}
-			}
-			if descVal, ok := docMap["description"]; ok {
-				if descStr, ok := descVal.(string); ok {
-					description = descStr
-				}
-			}
-			if execVal, ok := docMap["executed_at"]; ok {
-				if execTime, ok := execVal.(time.Time); ok {
-					executedAt = execTime
+
+				switch bsonTag {
+				case "_id", "id":
+					if field.Kind() == reflect.String {
+						id = field.String()
+					} else if field.Kind() == reflect.Interface {
+						if str, ok := field.Interface().(string); ok {
+							id = str
+						}
+					}
+				case "description":
+					if field.Kind() == reflect.String {
+						description = field.String()
+					} else if field.Kind() == reflect.Interface {
+						if str, ok := field.Interface().(string); ok {
+							description = str
+						}
+					}
+				case "executed_at":
+					if field.Type() == reflect.TypeOf(time.Time{}) {
+						executedAt = field.Interface().(time.Time)
+					} else if field.Kind() == reflect.Interface {
+						if t, ok := field.Interface().(time.Time); ok {
+							executedAt = t
+						}
+					}
 				}
 			}
 		}

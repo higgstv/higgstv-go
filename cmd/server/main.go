@@ -2,7 +2,7 @@ package main
 
 // @title           HiggsTV API Server
 // @version         1.0
-// @description     HiggsTV API Server 的 Golang 實作版本
+// @description     HiggsTV API Server 的 Golang 實作版本，採用分層架構設計，提供完整的 RESTful API 服務。支援 MongoDB 和 SQLite 兩種資料庫，可透過配置切換。認證方式：Session-based authentication（Cookie-based）
 // @termsOfService  http://swagger.io/terms/
 
 // @contact.name   API Support

@@ -11,7 +11,7 @@ func (c *Config) Validate() error {
 	}
 
 	if c.Database.Type == "" {
-		c.Database.Type = "mongodb" // 預設為 MongoDB
+		c.Database.Type = "sqlite" // 預設為 SQLite
 	}
 
 	if c.Database.Type != "mongodb" && c.Database.Type != "sqlite" {

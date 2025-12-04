@@ -1,8 +1,12 @@
 # SQLite 支援遷移計劃
 
+> **注意**：這是歷史文件，記錄 SQLite 支援的原始遷移計劃。SQLite 支援已經完成，詳細實作請參考 [SQLITE_IMPLEMENTATION_COMPLETE.md](./SQLITE_IMPLEMENTATION_COMPLETE.md)。
+
 ## 概述
 
 本文件說明如何為 HiggsTV Go 專案新增 SQLite 資料庫支援，同時保持與現有 MongoDB 的相容性。
+
+**狀態**：✅ 已完成 - 所有計劃項目均已實作完成
 
 ## 架構設計
 

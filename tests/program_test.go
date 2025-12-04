@@ -281,8 +281,8 @@ func TestDeleteProgram(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	require.NoError(t, err)
+ err = json.Unmarshal(w.Body.Bytes(), &response)
+ require.NoError(t, err)
 	
 	// 如果刪除失敗，輸出詳細錯誤信息
 	if response["state"] != float64(0) {

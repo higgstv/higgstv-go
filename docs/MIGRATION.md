@@ -2,18 +2,20 @@
 
 ## 概述
 
-HiggsTV Go API Server 使用遷移系統來管理資料庫結構變更。
+HiggsTV Go API Server 使用遷移系統來管理資料庫結構變更。系統支援 MongoDB 和 SQLite 兩種資料庫。
 
 ## 遷移系統
 
-遷移系統會自動執行所有未執行的遷移，確保資料庫結構與程式碼同步。
+遷移系統會自動執行所有未執行的遷移，確保資料庫結構與程式碼同步。系統會根據配置的資料庫類型自動選擇對應的遷移實作。
 
 ## 遷移記錄
 
-遷移記錄儲存在 `migrations` collection 中，包含：
-- `_id`: 遷移 ID
+遷移記錄儲存在 `migrations` collection/table 中，包含：
+- `_id` / `id`: 遷移 ID
 - `description`: 遷移描述
 - `executed_at`: 執行時間
+
+系統會根據資料庫類型自動選擇對應的儲存方式（MongoDB collection 或 SQLite table）。
 
 ## 自動執行
 
@@ -25,10 +27,12 @@ migration.RunMigrationsWithTimeout(db)
 
 ## 手動執行遷移
 
-如果需要手動執行遷移，可以使用遷移工具：
+如果需要手動執行遷移，應用程式啟動時會自動執行所有未執行的遷移。
+
+如果需要手動執行資料遷移（MongoDB → SQLite），可以使用遷移工具：
 
 ```bash
-go run cmd/migrate/main.go
+go run cmd/migrate/migrate_mongodb_to_sqlite.go
 ```
 
 ## 建立新遷移
@@ -39,15 +43,15 @@ go run cmd/migrate/main.go
 {
     ID:          "002_add_new_field",
     Description: "新增欄位到 User model",
-    Up: func(ctx context.Context, db *mongo.Database) error {
-        // 執行遷移邏輯
+    Up: func(ctx context.Context, db database.Database) error {
+        // 執行遷移邏輯（使用抽象介面，支援兩種資料庫）
         usersColl := db.Collection("users")
-        _, err := usersColl.UpdateMany(ctx, bson.M{}, bson.M{
-            "$set": bson.M{"new_field": "default_value"},
+        _, err := usersColl.UpdateMany(ctx, database.Filter{}, database.Update{
+            Set: map[string]interface{}{"new_field": "default_value"},
         })
         return err
     },
-    Down: func(ctx context.Context, db *mongo.Database) error {
+    Down: func(ctx context.Context, db database.Database) error {
         // 向下遷移（可選）
         return nil
     },
@@ -68,25 +72,7 @@ go run cmd/migrate/main.go
 
 ### 新增索引
 
-```go
-{
-    ID:          "003_add_user_email_index",
-    Description: "為 User email 欄位新增索引",
-    Up: func(ctx context.Context, db *mongo.Database) error {
-        usersColl := db.Collection("users")
-        _, err := usersColl.Indexes().CreateOne(ctx, mongo.IndexModel{
-            Keys: bson.M{"email": 1},
-            Options: options.Index().SetUnique(true),
-        })
-        return err
-    },
-    Down: func(ctx context.Context, db *mongo.Database) error {
-        usersColl := db.Collection("users")
-        _, err := usersColl.Indexes().DropOne(ctx, "email_1")
-        return err
-    },
-},
-```
+索引管理已統一在 `internal/database/indexes_unified.go` 中處理，會根據資料庫類型自動建立對應的索引。如需新增索引，請更新該檔案。
 
 ### 新增欄位
 
@@ -94,17 +80,22 @@ go run cmd/migrate/main.go
 {
     ID:          "004_add_user_avatar",
     Description: "新增 avatar 欄位到 User",
-    Up: func(ctx context.Context, db *mongo.Database) error {
+    Up: func(ctx context.Context, db database.Database) error {
         usersColl := db.Collection("users")
-        _, err := usersColl.UpdateMany(ctx, bson.M{}, bson.M{
-            "$set": bson.M{"avatar": ""},
+        _, err := usersColl.UpdateMany(ctx, database.Filter{}, database.Update{
+            Set: map[string]interface{}{"avatar": ""},
         })
         return err
     },
-    Down: func(ctx context.Context, db *mongo.Database) error {
+    Down: func(ctx context.Context, db database.Database) error {
         usersColl := db.Collection("users")
-        _, err := usersColl.UpdateMany(ctx, bson.M{}, bson.M{
-            "$unset": bson.M{"avatar": ""},
+        // SQLite 不支援 $unset，需要手動處理
+        if db.Type() == database.DatabaseTypeSQLite {
+            // SQLite 處理邏輯
+            return nil
+        }
+        _, err := usersColl.UpdateMany(ctx, database.Filter{}, database.Update{
+            Unset: map[string]interface{}{"avatar": ""},
         })
         return err
     },
@@ -123,10 +114,16 @@ go run cmd/migrate/main.go
 
 ### 檢查遷移狀態
 
-查詢 `migrations` collection：
+查詢 `migrations` collection/table：
 
+**MongoDB:**
 ```javascript
 db.migrations.find().sort({_id: 1})
+```
+
+**SQLite:**
+```sql
+SELECT * FROM migrations ORDER BY id;
 ```
 
 ## 注意事項

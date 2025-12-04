@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -25,6 +28,12 @@ type MigrationStats struct {
 	Counters   int
 	Migrations int
 	Errors     []string
+}
+
+// UUIDMapping UUID 映射表（MongoDB UUID -> SQLite ID）
+type UUIDMapping struct {
+	mongoUUID string // MongoDB 中的 UUID（各種格式）
+	sqliteID  string // SQLite 中的 ID
 }
 
 func main() {
@@ -114,6 +123,14 @@ func main() {
 	defer func() {
 		_ = sqliteDB.Close(context.Background())
 	}()
+	
+	// 暫時禁用外鍵約束以允許遷移（遷移完成後會重新啟用）
+	db := sqliteDB.GetDB()
+	if _, err := db.Exec("PRAGMA foreign_keys = OFF"); err != nil {
+		fmt.Printf("⚠️  無法禁用外鍵約束: %v\n", err)
+	} else {
+		fmt.Println("ℹ️  已暫時禁用外鍵約束以進行遷移")
+	}
 
 	fmt.Println("✅ SQLite 資料庫建立成功")
 	fmt.Println()
@@ -125,20 +142,23 @@ func main() {
 	ctx := context.Background()
 	stats := &MigrationStats{}
 
-	// 1. 遷移使用者
-	if err := migrateUsers(ctx, mongoDB, sqliteDB, stats); err != nil {
+	// 建立 UUID 映射表（用於將 MongoDB UUID 映射到 SQLite ID）
+	uuidMapping := make(map[string]string)
+
+	// 1. 遷移使用者（並建立 UUID 映射）
+	if err := migrateUsers(ctx, mongoDB, sqliteDB, stats, uuidMapping); err != nil {
 		fmt.Printf("❌ 遷移使用者失敗: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 2. 遷移頻道（不含節目）
-	if err := migrateChannels(ctx, mongoDB, sqliteDB, stats); err != nil {
+	// 2. 遷移頻道（不含節目，使用 UUID 映射）
+	if err := migrateChannels(ctx, mongoDB, sqliteDB, stats, uuidMapping); err != nil {
 		fmt.Printf("❌ 遷移頻道失敗: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 3. 遷移節目（從頻道的 contents 中）
-	if err := migratePrograms(ctx, mongoDB, sqliteDB, stats); err != nil {
+	// 3. 遷移節目（從頻道的 contents 中，使用 UUID 映射）
+	if err := migratePrograms(ctx, mongoDB, sqliteDB, stats, uuidMapping); err != nil {
 		fmt.Printf("❌ 遷移節目失敗: %v\n", err)
 		os.Exit(1)
 	}
@@ -182,6 +202,14 @@ func main() {
 		fmt.Printf("⚠️  驗證失敗: %v\n", err)
 	} else {
 		fmt.Println("✅ 資料驗證通過")
+	}
+
+	// 重新啟用外鍵約束
+	db = sqliteDB.GetDB()
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		fmt.Printf("⚠️  無法重新啟用外鍵約束: %v\n", err)
+	} else {
+		fmt.Println("ℹ️  已重新啟用外鍵約束")
 	}
 
 	fmt.Println("\n✅ 資料遷移完成！")
@@ -228,8 +256,20 @@ func showMongoDBStats(ctx context.Context, mongoDB *mongo.Database) error {
 	return nil
 }
 
+// convertUUIDToID 將 UUID 轉換為 ID（支援多種格式）
+func convertUUIDToID(uuidVal interface{}) string {
+	if idStr, ok := uuidVal.(string); ok {
+		return idStr
+	} else if uuidBinary, ok := uuidVal.(primitive.Binary); ok {
+		// UUID binary (subtype 4)
+		return strings.ToUpper(hex.EncodeToString(uuidBinary.Data))
+	} else {
+		return fmt.Sprintf("%v", uuidVal)
+	}
+}
+
 // migrateUsers 遷移使用者資料
-func migrateUsers(ctx context.Context, mongoDB *mongo.Database, sqliteDB database.Database, stats *MigrationStats) error {
+func migrateUsers(ctx context.Context, mongoDB *mongo.Database, sqliteDB database.Database, stats *MigrationStats, uuidMapping map[string]string) error {
 	fmt.Println("📋 遷移使用者資料...")
 
 	mongoUsersColl := mongoDB.Collection("users")
@@ -241,9 +281,49 @@ func migrateUsers(ctx context.Context, mongoDB *mongo.Database, sqliteDB databas
 		_ = cursor.Close(ctx)
 	}()
 
-	var users []models.User
-	if err := cursor.All(ctx, &users); err != nil {
+	// 先讀取為 bson.M 以處理 UUID 類型的 _id
+	var rawUsers []bson.M
+	if err := cursor.All(ctx, &rawUsers); err != nil {
 		return fmt.Errorf("讀取 MongoDB users 失敗: %w", err)
+	}
+
+	// 轉換為 models.User，處理 UUID 類型的 _id
+	var users []models.User
+	for _, rawUser := range rawUsers {
+		var user models.User
+		// 處理 _id（可能是 UUID 或 string）
+		var mongoID string
+		if idVal, ok := rawUser["_id"]; ok {
+			mongoID = convertUUIDToID(idVal)
+			user.ID = mongoID
+		}
+		// 處理其他欄位
+		if username, ok := rawUser["username"].(string); ok {
+			user.Username = username
+		}
+		if email, ok := rawUser["email"].(string); ok {
+			user.Email = email
+		}
+		if password, ok := rawUser["password"].(string); ok {
+			user.Password = password
+		}
+		if accessKey, ok := rawUser["access_key"].(string); ok {
+			user.AccessKey = &accessKey
+		}
+		if ownChannels, ok := rawUser["own_channels"].(bson.A); ok {
+			for _, ch := range ownChannels {
+				if chStr, ok := ch.(string); ok {
+					user.OwnChannels = append(user.OwnChannels, chStr)
+				}
+			}
+		}
+		if created, ok := rawUser["created"].(primitive.DateTime); ok {
+			user.Created = created.Time()
+		}
+		if lastModified, ok := rawUser["last_modified"].(primitive.DateTime); ok {
+			user.LastModified = lastModified.Time()
+		}
+		users = append(users, user)
 	}
 
 	fmt.Printf("   找到 %d 個使用者\n", len(users))
@@ -251,18 +331,38 @@ func migrateUsers(ctx context.Context, mongoDB *mongo.Database, sqliteDB databas
 	userRepo := repository.NewUserRepository(sqliteDB)
 	successCount := 0
 	for i, user := range users {
+		originalID := user.ID
 		if err := userRepo.Create(ctx, &user); err != nil {
-			// 如果使用者已存在，跳過
-			if !isDuplicateError(err) {
+			// 如果使用者已存在，查詢現有的 ID
+			if isDuplicateError(err) {
+				// 嘗試從 SQLite 查詢現有使用者的 ID
+				sqliteDBImpl, ok := sqliteDB.(*database.SQLiteDatabase)
+				if ok {
+					db := sqliteDBImpl.GetDB()
+					var existingID string
+					err := db.QueryRowContext(ctx, "SELECT id FROM users WHERE username = ?", user.Username).Scan(&existingID)
+					if err == nil {
+						user.ID = existingID
+					}
+				}
+				fmt.Printf("   ⚠️  [%d/%d] 使用者 %s 已存在，跳過\n", i+1, len(users), user.Username)
+			} else {
 				stats.Errors = append(stats.Errors, fmt.Sprintf("使用者 %s: %v", user.Username, err))
 				fmt.Printf("   ❌ [%d/%d] 使用者 %s 失敗: %v\n", i+1, len(users), user.Username, err)
 				continue
 			}
-			fmt.Printf("   ⚠️  [%d/%d] 使用者 %s 已存在，跳過\n", i+1, len(users), user.Username)
 		} else {
 			successCount++
 			if (i+1)%10 == 0 || i == len(users)-1 {
 				fmt.Printf("   ✅ [%d/%d] 使用者遷移中...\n", i+1, len(users))
+			}
+		}
+		// 建立 UUID 映射（支援多種格式）
+		if originalID != "" && user.ID != "" {
+			uuidMapping[originalID] = user.ID
+			// 如果原始 ID 是 base64 格式，也建立映射
+			if strings.Contains(originalID, "==") || strings.Contains(originalID, "=") {
+				uuidMapping[originalID] = user.ID
 			}
 		}
 	}
@@ -273,7 +373,7 @@ func migrateUsers(ctx context.Context, mongoDB *mongo.Database, sqliteDB databas
 }
 
 // migrateChannels 遷移頻道資料（不含節目）
-func migrateChannels(ctx context.Context, mongoDB *mongo.Database, sqliteDB database.Database, stats *MigrationStats) error {
+func migrateChannels(ctx context.Context, mongoDB *mongo.Database, sqliteDB database.Database, stats *MigrationStats, uuidMapping map[string]string) error {
 	fmt.Println("📋 遷移頻道資料...")
 
 	mongoChannelsColl := mongoDB.Collection("channels")
@@ -285,9 +385,190 @@ func migrateChannels(ctx context.Context, mongoDB *mongo.Database, sqliteDB data
 		_ = cursor.Close(ctx)
 	}()
 
-	var channels []models.Channel
-	if err := cursor.All(ctx, &channels); err != nil {
+	// 先讀取為 bson.M 以處理 UUID 類型的 _id
+	var rawChannels []bson.M
+	if err := cursor.All(ctx, &rawChannels); err != nil {
 		return fmt.Errorf("讀取 MongoDB channels 失敗: %w", err)
+	}
+
+	// 轉換為 models.Channel，處理 UUID 類型的 _id 和其他 UUID 欄位
+	var channels []models.Channel
+	for _, rawChannel := range rawChannels {
+		// 處理 _id（可能是 UUID 或 string），統一轉換為無連字符的大寫 32 字符格式
+		if idVal, ok := rawChannel["_id"]; ok {
+			var idStr string
+			if idStrVal, ok := idVal.(string); ok {
+				// 如果是字串，移除連字符並轉大寫
+				idStr = strings.ToUpper(strings.ReplaceAll(idStrVal, "-", ""))
+			} else if uuidVal, ok := idVal.(primitive.Binary); ok {
+				// UUID 類型（subtype 4）
+				idStr = strings.ToUpper(hex.EncodeToString(uuidVal.Data))
+			} else {
+				// 嘗試轉換為字串，然後移除連字符並轉大寫
+				idStr = strings.ToUpper(strings.ReplaceAll(fmt.Sprintf("%v", idVal), "-", ""))
+			}
+			rawChannel["_id"] = idStr
+		}
+		
+		// 處理 owners 陣列中的 UUID（使用映射表）
+		if owners, ok := rawChannel["owners"].(bson.A); ok {
+			var ownerStrs []string
+			for _, owner := range owners {
+				ownerID := convertUUIDToID(owner)
+				// 嘗試從映射表找到對應的 SQLite ID
+				if mappedID, found := uuidMapping[ownerID]; found {
+					ownerStrs = append(ownerStrs, mappedID)
+				} else {
+					// 如果找不到映射，嘗試直接使用（可能是已經正確的格式）
+					ownerStrs = append(ownerStrs, ownerID)
+				}
+			}
+			rawChannel["owners"] = ownerStrs
+		}
+		
+		// 處理 permission 陣列中的 user_id UUID（使用映射表）
+		if permissions, ok := rawChannel["permission"].(bson.A); ok {
+			var permList []bson.M
+			for _, perm := range permissions {
+				if permMap, ok := perm.(bson.M); ok {
+					if userID, ok := permMap["user_id"]; ok {
+						userIDStr := convertUUIDToID(userID)
+						// 嘗試從映射表找到對應的 SQLite ID
+						if mappedID, found := uuidMapping[userIDStr]; found {
+							permMap["user_id"] = mappedID
+						} else {
+							permMap["user_id"] = userIDStr
+						}
+					}
+					permList = append(permList, permMap)
+				}
+			}
+			rawChannel["permission"] = permList
+		}
+		
+		// 處理 contents_seq（可能是 int 或 string）
+		if contentsSeq, ok := rawChannel["contents_seq"]; ok {
+			if contentsSeqStr, ok := contentsSeq.(string); ok {
+				rawChannel["contents_seq"] = contentsSeqStr
+			} else if contentsSeqInt, ok := contentsSeq.(int32); ok {
+				rawChannel["contents_seq"] = fmt.Sprintf("%d", contentsSeqInt)
+			} else if contentsSeqInt64, ok := contentsSeq.(int64); ok {
+				rawChannel["contents_seq"] = fmt.Sprintf("%d", contentsSeqInt64)
+			} else {
+				rawChannel["contents_seq"] = fmt.Sprintf("%v", contentsSeq)
+			}
+		}
+		
+		// 處理頻道的 tags（確保是 int 陣列）
+		if tags, ok := rawChannel["tags"].(bson.A); ok {
+			var tagInts []int
+			for _, tag := range tags {
+				if tagInt, ok := tag.(int32); ok {
+					tagInts = append(tagInts, int(tagInt))
+				} else if tagInt64, ok := tag.(int64); ok {
+					tagInts = append(tagInts, int(tagInt64))
+				} else if tagInt, ok := tag.(int); ok {
+					tagInts = append(tagInts, tagInt)
+				} else if tagStr, ok := tag.(string); ok {
+					// 嘗試將字串轉換為 int
+					var tagInt int
+					if _, err := fmt.Sscanf(tagStr, "%d", &tagInt); err == nil {
+						tagInts = append(tagInts, tagInt)
+					}
+				}
+			}
+			rawChannel["tags"] = tagInts
+		}
+		
+		// 處理 contents 中的 tags 和 duration（確保是正確類型）
+		if contents, ok := rawChannel["contents"].(bson.A); ok {
+			var contentsList []bson.M
+			for _, content := range contents {
+				if contentMap, ok := content.(bson.M); ok {
+					// 處理 tags
+					if tags, ok := contentMap["tags"].(bson.A); ok {
+						var tagInts []int
+						for _, tag := range tags {
+							if tagInt, ok := tag.(int32); ok {
+								tagInts = append(tagInts, int(tagInt))
+							} else if tagInt64, ok := tag.(int64); ok {
+								tagInts = append(tagInts, int(tagInt64))
+							} else if tagInt, ok := tag.(int); ok {
+								tagInts = append(tagInts, tagInt)
+							} else if tagStr, ok := tag.(string); ok {
+								// 嘗試將字串轉換為 int
+								var tagInt int
+								if _, err := fmt.Sscanf(tagStr, "%d", &tagInt); err == nil {
+									tagInts = append(tagInts, tagInt)
+								}
+							}
+						}
+						contentMap["tags"] = tagInts
+					}
+					// 處理 duration
+					if duration, ok := contentMap["duration"]; ok {
+						var durationInt int
+						converted := false
+						
+						// 嘗試各種類型的轉換
+						if d, ok := duration.(int32); ok {
+							durationInt = int(d)
+							converted = true
+						} else if d, ok := duration.(int64); ok {
+							durationInt = int(d)
+							converted = true
+						} else if d, ok := duration.(int); ok {
+							durationInt = d
+							converted = true
+						} else if d, ok := duration.(float64); ok {
+							// 處理浮點數（可能是從 JSON 或其他來源轉換而來）
+							durationInt = int(d)
+							converted = true
+						} else if d, ok := duration.(float32); ok {
+							durationInt = int(d)
+							converted = true
+						} else if durationStr, ok := duration.(string); ok {
+							// 嘗試將字串轉換為 int
+							// 首先嘗試直接解析整數
+							if d, err := strconv.Atoi(strings.TrimSpace(durationStr)); err == nil {
+								durationInt = d
+								converted = true
+							} else {
+								// 如果失敗，嘗試提取數字部分（例如 "123秒" -> 123）
+								// 使用 fmt.Sscanf 來提取字串開頭的數字
+								var extractedInt int
+								if n, err := fmt.Sscanf(durationStr, "%d", &extractedInt); err == nil && n == 1 {
+									durationInt = extractedInt
+									converted = true
+								}
+							}
+						}
+						
+						// 如果成功轉換，設置 duration；否則設置為 0（預設值）
+						if converted {
+							contentMap["duration"] = durationInt
+						} else {
+							// 無法轉換的 duration，設置為 0 以避免解碼錯誤
+							contentMap["duration"] = 0
+						}
+					}
+					contentsList = append(contentsList, contentMap)
+				}
+			}
+			rawChannel["contents"] = contentsList
+		}
+		
+		// 使用 bson.Unmarshal 處理複雜結構
+		channelBytes, _ := bson.Marshal(rawChannel)
+		var channel models.Channel
+		if err := bson.Unmarshal(channelBytes, &channel); err == nil {
+			// 確保 ID 格式一致（無連字符，大寫）
+			channel.ID = strings.ToUpper(strings.ReplaceAll(channel.ID, "-", ""))
+			channels = append(channels, channel)
+		} else {
+			// 如果解碼失敗，記錄錯誤但繼續
+			stats.Errors = append(stats.Errors, fmt.Sprintf("頻道解碼失敗: %v", err))
+		}
 	}
 
 	fmt.Printf("   找到 %d 個頻道\n", len(channels))
@@ -337,7 +618,7 @@ func migrateChannels(ctx context.Context, mongoDB *mongo.Database, sqliteDB data
 }
 
 // migratePrograms 遷移節目資料（保留原有 ID）
-func migratePrograms(ctx context.Context, mongoDB *mongo.Database, sqliteDB database.Database, stats *MigrationStats) error {
+func migratePrograms(ctx context.Context, mongoDB *mongo.Database, sqliteDB database.Database, stats *MigrationStats, uuidMapping map[string]string) error {
 	fmt.Println("📋 遷移節目資料...")
 
 	mongoChannelsColl := mongoDB.Collection("channels")
@@ -349,13 +630,180 @@ func migratePrograms(ctx context.Context, mongoDB *mongo.Database, sqliteDB data
 		_ = cursor.Close(ctx)
 	}()
 
+	// 先讀取為 bson.M 以處理類型轉換
+	var rawChannels []bson.M
+	if err := cursor.All(ctx, &rawChannels); err != nil {
+		return fmt.Errorf("讀取 MongoDB channels 失敗: %w", err)
+	}
+
 	// 先找出所有節目的最大 ID，並設定 counter
 	maxProgramID := 0
 	allPrograms := make(map[string][]models.Program) // channelID -> programs
 	
-	for cursor.Next(ctx) {
+	for _, rawChannel := range rawChannels {
+		// 處理頻道的 _id，統一轉換為無連字符的大寫 32 字符格式
+		if idVal, ok := rawChannel["_id"]; ok {
+			var idStr string
+			if idStrVal, ok := idVal.(string); ok {
+				// 如果是字串，移除連字符並轉大寫
+				idStr = strings.ToUpper(strings.ReplaceAll(idStrVal, "-", ""))
+			} else if uuidVal, ok := idVal.(primitive.Binary); ok {
+				idStr = strings.ToUpper(hex.EncodeToString(uuidVal.Data))
+			} else {
+				// 嘗試轉換為字串，然後移除連字符並轉大寫
+				idStr = strings.ToUpper(strings.ReplaceAll(fmt.Sprintf("%v", idVal), "-", ""))
+			}
+			rawChannel["_id"] = idStr
+		}
+		
+		// 處理 owners 陣列中的 UUID
+		if owners, ok := rawChannel["owners"].(bson.A); ok {
+			var ownerStrs []string
+			for _, owner := range owners {
+				ownerID := convertUUIDToID(owner)
+				if mappedID, found := uuidMapping[ownerID]; found {
+					ownerStrs = append(ownerStrs, mappedID)
+				} else {
+					ownerStrs = append(ownerStrs, ownerID)
+				}
+			}
+			rawChannel["owners"] = ownerStrs
+		}
+		
+		// 處理 permission 陣列中的 user_id UUID
+		if permissions, ok := rawChannel["permission"].(bson.A); ok {
+			var permList []bson.M
+			for _, perm := range permissions {
+				if permMap, ok := perm.(bson.M); ok {
+					if userID, ok := permMap["user_id"]; ok {
+						userIDStr := convertUUIDToID(userID)
+						if mappedID, found := uuidMapping[userIDStr]; found {
+							permMap["user_id"] = mappedID
+						} else {
+							permMap["user_id"] = userIDStr
+						}
+					}
+					permList = append(permList, permMap)
+				}
+			}
+			rawChannel["permission"] = permList
+		}
+		
+		// 處理 contents_seq（可能是 int 或 string）
+		if contentsSeq, ok := rawChannel["contents_seq"]; ok {
+			if contentsSeqStr, ok := contentsSeq.(string); ok {
+				rawChannel["contents_seq"] = contentsSeqStr
+			} else if contentsSeqInt, ok := contentsSeq.(int32); ok {
+				rawChannel["contents_seq"] = fmt.Sprintf("%d", contentsSeqInt)
+			} else if contentsSeqInt64, ok := contentsSeq.(int64); ok {
+				rawChannel["contents_seq"] = fmt.Sprintf("%d", contentsSeqInt64)
+			} else {
+				rawChannel["contents_seq"] = fmt.Sprintf("%v", contentsSeq)
+			}
+		}
+		
+		// 處理頻道的 tags（確保是 int 陣列）
+		if tags, ok := rawChannel["tags"].(bson.A); ok {
+			var tagInts []int
+			for _, tag := range tags {
+				if tagInt, ok := tag.(int32); ok {
+					tagInts = append(tagInts, int(tagInt))
+				} else if tagInt64, ok := tag.(int64); ok {
+					tagInts = append(tagInts, int(tagInt64))
+				} else if tagInt, ok := tag.(int); ok {
+					tagInts = append(tagInts, tagInt)
+				} else if tagStr, ok := tag.(string); ok {
+					var tagInt int
+					if _, err := fmt.Sscanf(tagStr, "%d", &tagInt); err == nil {
+						tagInts = append(tagInts, tagInt)
+					}
+				}
+			}
+			rawChannel["tags"] = tagInts
+		}
+		
+		// 處理 contents 中的 tags 和 duration（確保是正確類型）
+		if contents, ok := rawChannel["contents"].(bson.A); ok {
+			var contentsList []bson.M
+			for _, content := range contents {
+				if contentMap, ok := content.(bson.M); ok {
+					// 處理 tags
+					if tags, ok := contentMap["tags"].(bson.A); ok {
+						var tagInts []int
+						for _, tag := range tags {
+							if tagInt, ok := tag.(int32); ok {
+								tagInts = append(tagInts, int(tagInt))
+							} else if tagInt64, ok := tag.(int64); ok {
+								tagInts = append(tagInts, int(tagInt64))
+							} else if tagInt, ok := tag.(int); ok {
+								tagInts = append(tagInts, tagInt)
+							} else if tagStr, ok := tag.(string); ok {
+								var tagInt int
+								if _, err := fmt.Sscanf(tagStr, "%d", &tagInt); err == nil {
+									tagInts = append(tagInts, tagInt)
+								}
+							}
+						}
+						contentMap["tags"] = tagInts
+					}
+					// 處理 duration
+					if duration, ok := contentMap["duration"]; ok {
+						var durationInt int
+						converted := false
+						
+						// 嘗試各種類型的轉換
+						if d, ok := duration.(int32); ok {
+							durationInt = int(d)
+							converted = true
+						} else if d, ok := duration.(int64); ok {
+							durationInt = int(d)
+							converted = true
+						} else if d, ok := duration.(int); ok {
+							durationInt = d
+							converted = true
+						} else if d, ok := duration.(float64); ok {
+							// 處理浮點數（可能是從 JSON 或其他來源轉換而來）
+							durationInt = int(d)
+							converted = true
+						} else if d, ok := duration.(float32); ok {
+							durationInt = int(d)
+							converted = true
+						} else if durationStr, ok := duration.(string); ok {
+							// 嘗試將字串轉換為 int
+							// 首先嘗試直接解析整數
+							if d, err := strconv.Atoi(strings.TrimSpace(durationStr)); err == nil {
+								durationInt = d
+								converted = true
+							} else {
+								// 如果失敗，嘗試提取數字部分（例如 "123秒" -> 123）
+								// 使用 fmt.Sscanf 來提取字串開頭的數字
+								var extractedInt int
+								if n, err := fmt.Sscanf(durationStr, "%d", &extractedInt); err == nil && n == 1 {
+									durationInt = extractedInt
+									converted = true
+								}
+							}
+						}
+						
+						// 如果成功轉換，設置 duration；否則設置為 0（預設值）
+						if converted {
+							contentMap["duration"] = durationInt
+						} else {
+							// 無法轉換的 duration，設置為 0 以避免解碼錯誤
+							contentMap["duration"] = 0
+						}
+					}
+					contentsList = append(contentsList, contentMap)
+				}
+			}
+			rawChannel["contents"] = contentsList
+		}
+		
+		// 使用 bson.Unmarshal 處理複雜結構
+		channelBytes, _ := bson.Marshal(rawChannel)
 		var channel models.Channel
-		if err := cursor.Decode(&channel); err != nil {
+		if err := bson.Unmarshal(channelBytes, &channel); err != nil {
+			stats.Errors = append(stats.Errors, fmt.Sprintf("讀取頻道失敗: %v", err))
 			continue
 		}
 
@@ -382,28 +830,194 @@ func migratePrograms(ctx context.Context, mongoDB *mongo.Database, sqliteDB data
 		}
 	}
 
-	// 重新查詢頻道（因為 cursor 已經遍歷完）
-	_ = cursor.Close(ctx)
-	cursor, err = mongoChannelsColl.Find(ctx, bson.M{})
-	if err != nil {
-		return fmt.Errorf("重新查詢 MongoDB channels 失敗: %w", err)
-	}
-	defer func() {
-		_ = cursor.Close(ctx)
-	}()
-
+	// 使用已處理的頻道資料遷移節目
 	programRepo := repository.NewProgramRepository(sqliteDB)
 	totalPrograms := 0
 	successCount := 0
 	
-	for cursor.Next(ctx) {
+	// 重新處理 rawChannels 以遷移節目（需要完整的類型轉換）
+	for _, rawChannel := range rawChannels {
+		// 處理頻道的 _id，統一轉換為無連字符的大寫 32 字符格式
+		if idVal, ok := rawChannel["_id"]; ok {
+			var idStr string
+			if idStrVal, ok := idVal.(string); ok {
+				// 如果是字串，移除連字符並轉大寫
+				idStr = strings.ToUpper(strings.ReplaceAll(idStrVal, "-", ""))
+			} else if uuidVal, ok := idVal.(primitive.Binary); ok {
+				idStr = strings.ToUpper(hex.EncodeToString(uuidVal.Data))
+			} else {
+				// 嘗試轉換為字串，然後移除連字符並轉大寫
+				idStr = strings.ToUpper(strings.ReplaceAll(fmt.Sprintf("%v", idVal), "-", ""))
+			}
+			rawChannel["_id"] = idStr
+		}
+		
+		// 處理 owners 陣列中的 UUID（使用映射表）
+		if owners, ok := rawChannel["owners"].(bson.A); ok {
+			var ownerStrs []string
+			for _, owner := range owners {
+				ownerID := convertUUIDToID(owner)
+				if mappedID, found := uuidMapping[ownerID]; found {
+					ownerStrs = append(ownerStrs, mappedID)
+				} else {
+					ownerStrs = append(ownerStrs, ownerID)
+				}
+			}
+			rawChannel["owners"] = ownerStrs
+		}
+		
+		// 處理 permission 陣列中的 user_id UUID（使用映射表）
+		if permissions, ok := rawChannel["permission"].(bson.A); ok {
+			var permList []bson.M
+			for _, perm := range permissions {
+				if permMap, ok := perm.(bson.M); ok {
+					if userID, ok := permMap["user_id"]; ok {
+						userIDStr := convertUUIDToID(userID)
+						if mappedID, found := uuidMapping[userIDStr]; found {
+							permMap["user_id"] = mappedID
+						} else {
+							permMap["user_id"] = userIDStr
+						}
+					}
+					permList = append(permList, permMap)
+				}
+			}
+			rawChannel["permission"] = permList
+		}
+		
+		// 處理 contents_seq（可能是 int 或 string）
+		if contentsSeq, ok := rawChannel["contents_seq"]; ok {
+			if contentsSeqStr, ok := contentsSeq.(string); ok {
+				rawChannel["contents_seq"] = contentsSeqStr
+			} else if contentsSeqInt, ok := contentsSeq.(int32); ok {
+				rawChannel["contents_seq"] = fmt.Sprintf("%d", contentsSeqInt)
+			} else if contentsSeqInt64, ok := contentsSeq.(int64); ok {
+				rawChannel["contents_seq"] = fmt.Sprintf("%d", contentsSeqInt64)
+			} else {
+				rawChannel["contents_seq"] = fmt.Sprintf("%v", contentsSeq)
+			}
+		}
+		
+		// 處理頻道的 tags（確保是 int 陣列）
+		if tags, ok := rawChannel["tags"].(bson.A); ok {
+			var tagInts []int
+			for _, tag := range tags {
+				if tagInt, ok := tag.(int32); ok {
+					tagInts = append(tagInts, int(tagInt))
+				} else if tagInt64, ok := tag.(int64); ok {
+					tagInts = append(tagInts, int(tagInt64))
+				} else if tagInt, ok := tag.(int); ok {
+					tagInts = append(tagInts, tagInt)
+				} else if tagStr, ok := tag.(string); ok {
+					var tagInt int
+					if _, err := fmt.Sscanf(tagStr, "%d", &tagInt); err == nil {
+						tagInts = append(tagInts, tagInt)
+					}
+				}
+			}
+			rawChannel["tags"] = tagInts
+		}
+		
+		// 處理 contents 中的 tags 和 duration
+		if contents, ok := rawChannel["contents"].(bson.A); ok {
+			var contentsList []bson.M
+			for _, content := range contents {
+				if contentMap, ok := content.(bson.M); ok {
+					// 處理 tags
+					if tags, ok := contentMap["tags"].(bson.A); ok {
+						var tagInts []int
+						for _, tag := range tags {
+							if tagInt, ok := tag.(int32); ok {
+								tagInts = append(tagInts, int(tagInt))
+							} else if tagInt64, ok := tag.(int64); ok {
+								tagInts = append(tagInts, int(tagInt64))
+							} else if tagInt, ok := tag.(int); ok {
+								tagInts = append(tagInts, tagInt)
+							} else if tagStr, ok := tag.(string); ok {
+								var tagInt int
+								if _, err := fmt.Sscanf(tagStr, "%d", &tagInt); err == nil {
+									tagInts = append(tagInts, tagInt)
+								}
+							}
+						}
+						contentMap["tags"] = tagInts
+					}
+					// 處理 duration
+					if duration, ok := contentMap["duration"]; ok {
+						var durationInt int
+						converted := false
+						
+						// 嘗試各種類型的轉換
+						if d, ok := duration.(int32); ok {
+							durationInt = int(d)
+							converted = true
+						} else if d, ok := duration.(int64); ok {
+							durationInt = int(d)
+							converted = true
+						} else if d, ok := duration.(int); ok {
+							durationInt = d
+							converted = true
+						} else if d, ok := duration.(float64); ok {
+							// 處理浮點數（可能是從 JSON 或其他來源轉換而來）
+							durationInt = int(d)
+							converted = true
+						} else if d, ok := duration.(float32); ok {
+							durationInt = int(d)
+							converted = true
+						} else if durationStr, ok := duration.(string); ok {
+							// 嘗試將字串轉換為 int
+							// 首先嘗試直接解析整數
+							if d, err := strconv.Atoi(strings.TrimSpace(durationStr)); err == nil {
+								durationInt = d
+								converted = true
+							} else {
+								// 如果失敗，嘗試提取數字部分（例如 "123秒" -> 123）
+								// 使用 fmt.Sscanf 來提取字串開頭的數字
+								var extractedInt int
+								if n, err := fmt.Sscanf(durationStr, "%d", &extractedInt); err == nil && n == 1 {
+									durationInt = extractedInt
+									converted = true
+								}
+							}
+						}
+						
+						// 如果成功轉換，設置 duration；否則設置為 0（預設值）
+						if converted {
+							contentMap["duration"] = durationInt
+						} else {
+							// 無法轉換的 duration，設置為 0 以避免解碼錯誤
+							contentMap["duration"] = 0
+						}
+					}
+					contentsList = append(contentsList, contentMap)
+				}
+			}
+			rawChannel["contents"] = contentsList
+		}
+		
+		// 使用 bson.Unmarshal 處理複雜結構
+		channelBytes, _ := bson.Marshal(rawChannel)
 		var channel models.Channel
-		if err := cursor.Decode(&channel); err != nil {
+		if err := bson.Unmarshal(channelBytes, &channel); err != nil {
 			stats.Errors = append(stats.Errors, fmt.Sprintf("讀取頻道失敗: %v", err))
 			continue
 		}
 
 		if len(channel.Contents) == 0 {
+			continue
+		}
+
+		// 檢查頻道是否在 SQLite 中存在（如果不存在，可能是重複頻道被跳過了）
+		channelRepo := repository.NewChannelRepository(sqliteDB)
+		existingChannel, err := channelRepo.FindByID(ctx, channel.ID)
+		if err != nil {
+			// 查詢錯誤，記錄但繼續處理節目
+			stats.Errors = append(stats.Errors, fmt.Sprintf("查詢頻道 %s 失敗: %v", channel.ID, err))
+		}
+		
+		// 如果頻道不存在，跳過節目遷移和順序設定（這是重複頻道）
+		if existingChannel == nil {
+			// 頻道不存在，可能是重複頻道被跳過了，不遷移其節目和順序
 			continue
 		}
 
@@ -413,15 +1027,31 @@ func migratePrograms(ctx context.Context, mongoDB *mongo.Database, sqliteDB data
 			programCopy := program
 			
 			// 使用 MigrateProgram 方法（保留原有 ID）
-			if err := programRepo.(*repository.SQLiteProgramRepository).MigrateProgram(ctx, channel.ID, &programCopy); err != nil {
+			inserted, err := programRepo.(*repository.SQLiteProgramRepository).MigrateProgram(ctx, channel.ID, &programCopy)
+			if err != nil {
+				// 如果是 UNIQUE constraint 錯誤或節目已存在錯誤，跳過
+				if strings.Contains(err.Error(), "UNIQUE constraint") || 
+				   strings.Contains(err.Error(), "already exists") {
+					// 節目已存在，跳過（不計入錯誤）
+					continue
+				}
 				stats.Errors = append(stats.Errors, fmt.Sprintf("節目 %d (頻道 %s): %v", program.ID, channel.ID, err))
-				fmt.Printf("   ❌ 節目 %d (頻道 %s) 失敗: %v\n", program.ID, channel.ID, err)
+				if totalPrograms%10000 == 0 {
+					fmt.Printf("   ⚠️  節目遷移中... (%d 已處理, %d 成功插入)\n", totalPrograms, successCount)
+				}
 				continue
 			}
+			
+			// 只有實際插入新節目時才計入成功
+			if inserted {
 			successCount++
+				if successCount%10000 == 0 {
+					fmt.Printf("   ✅ 節目遷移中... (%d/%d 成功插入)\n", successCount, totalPrograms)
+				}
+			}
 		}
 		
-		// 如果有 contents_order，需要設定順序
+		// 如果有 contents_order，需要設定順序（只有在頻道存在時才設定）
 		if len(channel.ContentsOrder) > 0 {
 			if err := programRepo.SetOrder(ctx, channel.ID, channel.ContentsOrder); err != nil {
 				stats.Errors = append(stats.Errors, fmt.Sprintf("設定頻道 %s 節目順序失敗: %v", channel.ID, err))

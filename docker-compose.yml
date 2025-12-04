@@ -1,17 +1,9 @@
 version: '3.8'
 
-services:
-  mongodb:
-    image: mongo:7
-    container_name: higgstv-mongodb
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_DATABASE: higgstv
-    volumes:
-      - mongodb_data:/data/db
+# SQLite 版本的 Docker Compose 配置（預設）
+# 使用方式：docker-compose up
 
+services:
   api:
     build:
       context: .
@@ -23,14 +15,13 @@ services:
     environment:
       HIGGSTV_SERVER_PORT: "8080"
       HIGGSTV_SERVER_ENV: "production"
-      HIGGSTV_DATABASE_URI: "mongodb://mongodb:27017"
+      # SQLite 配置
+      HIGGSTV_DATABASE_TYPE: "sqlite"
+      HIGGSTV_DATABASE_URI: "file:/root/data/higgstv.db?cache=shared&mode=rwc"
       HIGGSTV_DATABASE_DATABASE: "higgstv"
       HIGGSTV_SESSION_SECRET: "change-me-in-production"
-    depends_on:
-      - mongodb
     volumes:
       - ./config:/root/config
-
-volumes:
-  mongodb_data:
+      # SQLite 資料目錄（持久化）
+      - ./data:/root/data
 

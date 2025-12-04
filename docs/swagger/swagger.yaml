@@ -224,7 +224,12 @@ info:
     email: support@higgstv.com
     name: API Support
     url: http://www.higgstv.com
-  description: Session-based authentication
+  description: |
+    HiggsTV API Server 的 Golang 實作版本，採用分層架構設計，提供完整的 RESTful API 服務。
+    
+    **資料庫支援**：支援 MongoDB 和 SQLite 兩種資料庫，可透過配置切換。
+    
+    **認證方式**：Session-based authentication（Cookie-based）
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -732,7 +737,7 @@ paths:
       - 認證
   /health:
     get:
-      description: 檢查伺服器和資料庫連線狀態
+      description: 檢查伺服器和資料庫連線狀態（支援 MongoDB 和 SQLite）
       produces:
       - application/json
       responses:
@@ -746,7 +751,7 @@ paths:
       - 系統
   /ready:
     get:
-      description: 檢查服務是否準備好接受請求（包含資料庫查詢測試）
+      description: 檢查服務是否準備好接受請求（包含資料庫查詢測試，支援 MongoDB 和 SQLite）
       produces:
       - application/json
       responses:

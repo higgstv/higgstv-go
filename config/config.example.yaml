@@ -3,8 +3,8 @@ server:
   env: "development"  # development, production
 
 database:
-  type: "mongodb"  # mongodb 或 sqlite
-  uri: "mongodb://localhost:27017"  # MongoDB URI 或 SQLite 檔案路徑（例如：file:./data/higgstv.db）
+  type: "sqlite"  # sqlite 或 mongodb（預設：sqlite）
+  uri: "file:./data/higgstv.db?cache=shared&mode=rwc"  # SQLite 檔案路徑或 MongoDB URI（例如：mongodb://localhost:27017）
   database: "higgstv"
 
 session:

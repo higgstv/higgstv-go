@@ -29,10 +29,10 @@
 
 ```bash
 # 使用預設路徑（./data/migrated_higgstv.db）
-go run cmd/migrate_mongodb_to_sqlite.go
+go run cmd/migrate/migrate_mongodb_to_sqlite.go
 
 # 指定 SQLite 檔案路徑
-go run cmd/migrate_mongodb_to_sqlite.go /path/to/output.db
+go run cmd/migrate/migrate_mongodb_to_sqlite.go /path/to/output.db
 ```
 
 ### 遷移流程
@@ -67,7 +67,7 @@ database:
 目前尚未實作 SQLite 到 MongoDB 的遷移工具。如果需要，可以：
 
 1. 使用 MongoDB 的 `mongoimport` 工具
-2. 或實作類似的遷移工具（參考 `cmd/migrate_mongodb_to_sqlite.go`）
+2. 或實作類似的遷移工具（參考 `cmd/migrate/migrate_mongodb_to_sqlite.go`）
 
 ## 測試環境設定
 
@@ -103,7 +103,7 @@ go test ./tests/...
 
 ```bash
 # 使用檢查工具
-go run cmd/check_database.go
+go run cmd/check_database/check_database.go
 ```
 
 ### 手動驗證
@@ -167,7 +167,7 @@ mongosh --eval "db.channels.countDocuments()"
 
 2. **資料庫連線**：
    ```bash
-   go run cmd/check_database.go
+   go run cmd/check_database/check_database.go
    ```
 
 3. **測試日誌**：
@@ -178,6 +178,6 @@ mongosh --eval "db.channels.countDocuments()"
 ## 總結
 
 - ✅ **測試環境**：不需要資料遷移，測試會自動建立資料
-- ✅ **生產環境**：使用 `cmd/migrate_mongodb_to_sqlite.go` 工具遷移資料
-- ✅ **驗證**：使用 `cmd/check_database.go` 檢查資料庫狀態
+- ✅ **生產環境**：使用 `cmd/migrate/migrate_mongodb_to_sqlite.go` 工具遷移資料
+- ✅ **驗證**：使用 `cmd/check_database/check_database.go` 檢查資料庫狀態
 

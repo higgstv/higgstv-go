@@ -7,7 +7,10 @@ HiggsTV API Server 的 Golang 實作版本，採用分層架構設計，提供�
 ```
 higgstv-go/
 ├── cmd/
-│   └── server/              # 主程式入口
+│   ├── server/              # 主程式入口
+│   ├── check_database/      # 資料庫連線檢查工具
+│   ├── check_mongodb/       # MongoDB 檢查工具
+│   └── migrate/             # MongoDB 到 SQLite 遷移工具
 ├── internal/
 │   ├── api/                 # API 層
 │   │   ├── handlers/        # 請求處理器
@@ -15,8 +18,13 @@ higgstv-go/
 │   │   ├── response/        # 統一回應格式
 │   │   └── router.go        # 路由設定
 │   ├── config/              # 配置管理
+│   ├── database/            # 資料庫抽象層
+│   │   ├── interface.go     # 資料庫介面定義
+│   │   ├── factory.go       # 資料庫工廠
+│   │   ├── mongodb.go       # MongoDB 實作
+│   │   └── sqlite.go        # SQLite 實作
 │   ├── models/              # 資料模型（User, Channel, Program）
-│   ├── repository/          # 資料存取層
+│   ├── repository/          # 資料存取層（支援 MongoDB 和 SQLite）
 │   └── service/             # 業務邏輯層
 ├── pkg/                     # 共用套件
 │   ├── errors/              # 錯誤定義
@@ -40,14 +48,17 @@ higgstv-go/
 
 - ✅ **完整的 API 實作**：所有認證、頻道、節目相關 API
 - ✅ **分層架構**：清晰的 Repository → Service → Handler 架構
+- ✅ **多資料庫支援**：支援 MongoDB 和 SQLite，可透過配置切換
+- ✅ **資料庫抽象層**：統一的資料庫介面，易於擴展
 - ✅ **錯誤處理**：統一的錯誤處理機制
 - ✅ **日誌記錄**：使用 zap 進行結構化日誌記錄
 - ✅ **Session 管理**：Cookie-based session 認證
 - ✅ **CORS 支援**：跨域請求支援
 - ✅ **請求驗證**：使用 validator 進行請求參數驗證
 - ✅ **Docker 支援**：完整的 Docker 和 Docker Compose 配置
-- ✅ **測試框架**：整合測試範例
+- ✅ **測試框架**：整合測試範例，支援測試隔離
 - ✅ **MongoDB 相容性**：支援 UUID binary 和字串兩種格式，可無縫讀取舊資料庫
+- ✅ **資料遷移工具**：提供 MongoDB 到 SQLite 的遷移工具
 
 ## 快速開始
 
@@ -63,11 +74,32 @@ go mod download
 
 ```bash
 cp config/config.example.yaml config/config.yaml
-# 編輯 config.yaml，設定 MongoDB URI、Session Secret 等
+# 編輯 config.yaml，設定資料庫類型、URI、Session Secret 等
 ```
 
-### 3. 啟動 MongoDB（使用 Docker）
+**資料庫配置範例：**
 
+**SQLite（預設）：**
+```yaml
+database:
+  type: "sqlite"
+  uri: "file:./data/higgstv.db?cache=shared&mode=rwc"
+  database: "higgstv"
+```
+
+**MongoDB：**
+```yaml
+database:
+  type: "mongodb"
+  uri: "mongodb://localhost:27017"
+  database: "higgstv"
+```
+
+### 3. 啟動資料庫（使用 Docker，僅 MongoDB 需要）
+
+**SQLite（預設）：** 無需額外啟動，會自動建立資料庫檔案
+
+**MongoDB：**
 ```bash
 docker-compose up -d mongodb
 ```
@@ -89,7 +121,11 @@ make build
 
 **使用 Docker Compose：**
 ```bash
+# 使用 SQLite（預設，不需要 MongoDB）
 docker-compose up
+
+# 使用 MongoDB
+docker-compose -f docker-compose.mongodb.yml up
 ```
 
 ## 環境變數
@@ -98,7 +134,10 @@ docker-compose up
 
 - `HIGGSTV_SERVER_PORT`: 伺服器埠號（預設：8080）
 - `HIGGSTV_SERVER_ENV`: 環境（development/production）
-- `HIGGSTV_DATABASE_URI`: MongoDB 連線 URI
+- `HIGGSTV_DATABASE_TYPE`: 資料庫類型（sqlite/mongodb，預設：sqlite）
+- `HIGGSTV_DATABASE_URI`: 資料庫連線 URI
+  - SQLite（預設）: `file:./data/higgstv.db?cache=shared&mode=rwc`
+  - MongoDB: `mongodb://localhost:27017`
 - `HIGGSTV_DATABASE_DATABASE`: 資料庫名稱
 - `HIGGSTV_SESSION_SECRET`: Session 加密金鑰
 
@@ -187,8 +226,10 @@ docker build -t higgstv-go .
 
 ### 使用 Docker Compose
 
+**使用 SQLite（預設）：**
+
 ```bash
-# 啟動所有服務（MongoDB + API）
+# 啟動服務（僅 API，不需要 MongoDB）
 docker-compose up -d
 
 # 查看日誌
@@ -197,6 +238,24 @@ docker-compose logs -f api
 # 停止服務
 docker-compose down
 ```
+
+**使用 MongoDB：**
+
+```bash
+# 啟動所有服務（MongoDB + API）
+docker-compose -f docker-compose.mongodb.yml up -d
+
+# 查看日誌
+docker-compose -f docker-compose.mongodb.yml logs -f api
+
+# 停止服務
+docker-compose -f docker-compose.mongodb.yml down
+```
+
+**注意事項：**
+- SQLite（預設）資料庫會儲存在 `./data` 目錄中（會自動建立）
+- MongoDB 版本需要 MongoDB 服務運行
+- SQLite 版本不需要 MongoDB，適合輕量級部署和開發環境
 
 ## 專案狀態
 
@@ -233,6 +292,14 @@ docker-compose down
 - [x] 環境變數文件
 - [x] 部署腳本
 
+### Phase 5：多資料庫支援 ✅
+- [x] 資料庫抽象層設計
+- [x] SQLite 完整支援
+- [x] MongoDB 和 SQLite 並存
+- [x] 資料遷移工具
+- [x] 測試隔離機制
+- [x] 完整的文檔說明
+
 ## 監控與指標
 
 ### Prometheus 指標
@@ -252,7 +319,10 @@ docker-compose down
 ## 技術棧
 
 - **Web 框架**: Gin
-- **資料庫**: MongoDB (官方 Go Driver)
+- **資料庫**: 
+  - MongoDB (官方 Go Driver)
+  - SQLite (go-sqlite3)
+  - 支援透過配置切換資料庫類型
 - **Session**: gorilla/sessions
 - **日誌**: zap
 - **驗證**: go-playground/validator
@@ -260,6 +330,52 @@ docker-compose down
 - **測試**: testify
 - **監控**: Prometheus
 - **CI/CD**: GitHub Actions
+
+## 資料庫支援
+
+### MongoDB
+- 完整的 MongoDB 支援
+- 支援 UUID binary 和字串兩種格式
+- 自動建立索引
+- 交易支援
+
+### SQLite
+- 完整的 SQLite 支援
+- 自動建立資料庫結構
+- 外鍵約束支援
+- 交易支援
+- 適合開發和測試環境
+
+### 資料遷移
+提供 MongoDB 到 SQLite 的遷移工具：
+```bash
+go run cmd/migrate/migrate_mongodb_to_sqlite.go [sqlite_path]
+```
+
+詳細說明請參考 `docs/DATA_MIGRATION_GUIDE.md`。
+
+## 資料庫支援
+
+### MongoDB
+- 完整的 MongoDB 支援
+- 支援 UUID binary 和字串兩種格式
+- 自動建立索引
+- 交易支援
+
+### SQLite
+- 完整的 SQLite 支援
+- 自動建立資料庫結構
+- 外鍵約束支援
+- 交易支援
+- 適合開發和測試環境
+
+### 資料遷移
+提供 MongoDB 到 SQLite 的遷移工具：
+```bash
+go run cmd/migrate/migrate_mongodb_to_sqlite.go [sqlite_path]
+```
+
+詳細說明請參考 `docs/DATA_MIGRATION_GUIDE.md`。
 
 ## 授權
 

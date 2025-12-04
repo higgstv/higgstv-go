@@ -1,12 +1,15 @@
-# 測試指南
+# 快速測試指南
+
+> **注意**：這是快速測試指南，適合快速驗證功能。如需完整的測試說明（包含 MongoDB 和 SQLite 配置、測試架構等），請參考 [TESTING_GUIDE.md](./TESTING_GUIDE.md)。
 
 ## 快速測試
 
 ### 1. 啟動伺服器
 
 ```bash
-# 確保 MongoDB 正在運行
-docker ps | grep mongo
+# 確保資料庫正在運行（MongoDB 或 SQLite）
+# MongoDB: docker ps | grep mongo
+# SQLite: 無需額外啟動
 
 # 啟動伺服器
 go run cmd/server/main.go

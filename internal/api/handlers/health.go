@@ -12,7 +12,7 @@ import (
 
 // HealthCheck 健康檢查端點
 // @Summary      健康檢查
-// @Description  檢查伺服器和資料庫連線狀態
+// @Description  檢查伺服器和資料庫連線狀態（支援 MongoDB 和 SQLite）
 // @Tags         系統
 // @Produce      json
 // @Success      200 {object} map[string]interface{} "服務正常"
@@ -39,7 +39,7 @@ func HealthCheck(db database.Database) gin.HandlerFunc {
 
 // ReadinessCheck 就緒檢查端點（更詳細的檢查）
 // @Summary      就緒檢查
-// @Description  檢查服務是否準備好接受請求（包含資料庫查詢測試）
+// @Description  檢查服務是否準備好接受請求（包含資料庫查詢測試，支援 MongoDB 和 SQLite）
 // @Tags         系統
 // @Produce      json
 // @Success      200 {object} map[string]interface{} "服務就緒"

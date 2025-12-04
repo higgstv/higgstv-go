@@ -39,17 +39,17 @@
 
 ```bash
 # 使用預設路徑（./data/migrated_higgstv.db）
-go run cmd/migrate_mongodb_to_sqlite.go
+go run cmd/migrate/migrate_mongodb_to_sqlite.go
 
 # 指定 SQLite 檔案路徑
-go run cmd/migrate_mongodb_to_sqlite.go /path/to/output.db
+go run cmd/migrate/migrate_mongodb_to_sqlite.go /path/to/output.db
 ```
 
 ### 編譯後使用
 
 ```bash
 # 編譯
-go build -o migrate_mongodb_to_sqlite cmd/migrate_mongodb_to_sqlite.go
+go build -o migrate_mongodb_to_sqlite cmd/migrate/migrate_mongodb_to_sqlite.go
 
 # 執行
 ./migrate_mongodb_to_sqlite
@@ -113,7 +113,7 @@ database:
 ### 1. 使用檢查工具
 
 ```bash
-go run cmd/check_database.go
+go run cmd/check_database/check_database.go
 ```
 
 ### 2. 手動驗證

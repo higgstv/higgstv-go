@@ -32,18 +32,19 @@ func (r *SQLiteChannelRepository) FindByID(ctx context.Context, id string) (*mod
 	db := r.getDB()
 
 	// 查詢頻道基本資訊
-	query := `SELECT id, type, name, desc, contents_seq, cover_default, created, last_modified 
+	query := `SELECT id, type, name, desc, CAST(contents_seq AS TEXT) as contents_seq, cover_default, created, last_modified 
 	          FROM channels WHERE id = ?`
 
 	var channel models.Channel
 	var coverDefault sql.NullString
+	var contentsSeq sql.NullString
 
 	err := db.QueryRowContext(ctx, query, id).Scan(
 		&channel.ID,
 		&channel.Type,
 		&channel.Name,
 		&channel.Desc,
-		&channel.ContentsSeq,
+		&contentsSeq,
 		&coverDefault,
 		&channel.Created,
 		&channel.LastModified,
@@ -57,6 +58,13 @@ func (r *SQLiteChannelRepository) FindByID(ctx context.Context, id string) (*mod
 
 	if coverDefault.Valid {
 		channel.Cover = &models.ChannelCover{Default: coverDefault.String}
+	}
+
+	// 處理 contents_seq
+	if contentsSeq.Valid {
+		channel.ContentsSeq = contentsSeq.String
+	} else {
+		channel.ContentsSeq = ""
 	}
 
 	// 載入 tags
@@ -223,18 +231,74 @@ func (r *SQLiteChannelRepository) ListChannels(ctx context.Context, filter datab
 			args = append(args, value)
 		case "name":
 			// 處理正則表達式（簡化為 LIKE）
-			if nameFilter, ok := value.(map[string]interface{}); ok {
+			if nameFilter, ok := value.(database.Filter); ok {
 				if regex, ok := nameFilter["$regex"].(string); ok {
 					whereParts = append(whereParts, "name LIKE ?")
 					args = append(args, "%"+regex+"%")
+				} else {
+					whereParts = append(whereParts, "name = ?")
+					args = append(args, value)
+				}
+			} else if nameFilter, ok := value.(map[string]interface{}); ok {
+				if regex, ok := nameFilter["$regex"].(string); ok {
+					whereParts = append(whereParts, "name LIKE ?")
+					args = append(args, "%"+regex+"%")
+				} else {
+					whereParts = append(whereParts, "name = ?")
+					args = append(args, value)
 				}
 			} else {
 				whereParts = append(whereParts, "name = ?")
 				args = append(args, value)
 			}
 		case "type":
-			whereParts = append(whereParts, "type = ?")
-			args = append(args, value)
+			// 處理 $nin 操作（not in）
+			if typeFilter, ok := value.(database.Filter); ok {
+				if ninValues, ok := typeFilter["$nin"].([]string); ok {
+					// 建立 NOT IN 子句
+					placeholders := make([]string, len(ninValues))
+					for i, v := range ninValues {
+						placeholders[i] = "?"
+						args = append(args, v)
+					}
+					whereParts = append(whereParts, fmt.Sprintf("type NOT IN (%s)", strings.Join(placeholders, ", ")))
+				} else {
+					// 預設為等於操作
+					whereParts = append(whereParts, "type = ?")
+					args = append(args, value)
+				}
+			} else if typeFilter, ok := value.(map[string]interface{}); ok {
+				if ninValues, ok := typeFilter["$nin"].([]string); ok {
+					// 建立 NOT IN 子句
+					placeholders := make([]string, len(ninValues))
+					for i, v := range ninValues {
+						placeholders[i] = "?"
+						args = append(args, v)
+					}
+					whereParts = append(whereParts, fmt.Sprintf("type NOT IN (%s)", strings.Join(placeholders, ", ")))
+				} else {
+					// 預設為等於操作
+					whereParts = append(whereParts, "type = ?")
+					args = append(args, value)
+				}
+			} else {
+				// 預設為等於操作
+				whereParts = append(whereParts, "type = ?")
+				args = append(args, value)
+			}
+		case "contents.0":
+			// 處理 has_contents 參數（檢查是否有節目）
+			if contentsFilter, ok := value.(database.Filter); ok {
+				if _, ok := contentsFilter["$exists"]; ok {
+					// 使用 EXISTS 子查詢檢查是否有節目
+					whereParts = append(whereParts, "EXISTS (SELECT 1 FROM channel_program_order WHERE channel_id = channels.id)")
+				}
+			} else if contentsFilter, ok := value.(map[string]interface{}); ok {
+				if _, ok := contentsFilter["$exists"]; ok {
+					// 使用 EXISTS 子查詢檢查是否有節目
+					whereParts = append(whereParts, "EXISTS (SELECT 1 FROM channel_program_order WHERE channel_id = channels.id)")
+				}
+			}
 		default:
 			whereParts = append(whereParts, fmt.Sprintf("%s = ?", key))
 			args = append(args, value)
@@ -269,7 +333,7 @@ func (r *SQLiteChannelRepository) ListChannels(ctx context.Context, filter datab
 		}
 	}
 
-	query := fmt.Sprintf(`SELECT id, type, name, desc, contents_seq, cover_default, created, last_modified 
+	query := fmt.Sprintf(`SELECT id, type, name, desc, CAST(contents_seq AS TEXT) as contents_seq, cover_default, created, last_modified 
 	                      FROM channels %s %s %s`, whereClause, orderClause, limitClause)
 
 	rows, err := db.QueryContext(ctx, query, args...)
@@ -284,13 +348,14 @@ func (r *SQLiteChannelRepository) ListChannels(ctx context.Context, filter datab
 	for rows.Next() {
 		var channel models.Channel
 		var coverDefault sql.NullString
+		var contentsSeq sql.NullString
 
 		if err := rows.Scan(
 			&channel.ID,
 			&channel.Type,
 			&channel.Name,
 			&channel.Desc,
-			&channel.ContentsSeq,
+			&contentsSeq,
 			&coverDefault,
 			&channel.Created,
 			&channel.LastModified,
@@ -300,6 +365,13 @@ func (r *SQLiteChannelRepository) ListChannels(ctx context.Context, filter datab
 
 		if coverDefault.Valid {
 			channel.Cover = &models.ChannelCover{Default: coverDefault.String}
+		}
+
+		// 處理 contents_seq
+		if contentsSeq.Valid {
+			channel.ContentsSeq = contentsSeq.String
+		} else {
+			channel.ContentsSeq = ""
 		}
 
 		// 載入關聯資料（可選，根據需求決定是否載入）
@@ -451,6 +523,7 @@ func (r *SQLiteChannelRepository) loadPrograms(ctx context.Context, channelID st
 	}()
 
 	var programs []models.Program
+	var programIDs []int
 	for rows.Next() {
 		var program models.Program
 		if err := rows.Scan(
@@ -466,20 +539,30 @@ func (r *SQLiteChannelRepository) loadPrograms(ctx context.Context, channelID st
 			return nil, err
 		}
 
-		// 載入 tags
-		tags, err := r.loadProgramTags(ctx, program.ID)
+		programs = append(programs, program)
+		programIDs = append(programIDs, program.ID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// 批量載入所有節目的 tags
+	if len(programIDs) > 0 {
+		tagsMap, err := r.loadProgramTagsBatch(ctx, programIDs)
 		if err != nil {
 			return nil, err
 		}
-		program.Tags = tags
-
-		programs = append(programs, program)
+		// 將 tags 分配到對應的節目
+		for i := range programs {
+			programs[i].Tags = tagsMap[programs[i].ID]
+		}
 	}
 
-	return programs, rows.Err()
+	return programs, nil
 }
 
-// 輔助方法：載入 program tags
+// 輔助方法：載入 program tags（單個節目）
 func (r *SQLiteChannelRepository) loadProgramTags(ctx context.Context, programID int) ([]int, error) {
 	db := r.getDB()
 	query := `SELECT tag FROM program_tags WHERE program_id = ? ORDER BY tag`
@@ -502,6 +585,45 @@ func (r *SQLiteChannelRepository) loadProgramTags(ctx context.Context, programID
 	}
 
 	return tags, rows.Err()
+}
+
+// 輔助方法：批量載入多個節目的 tags
+func (r *SQLiteChannelRepository) loadProgramTagsBatch(ctx context.Context, programIDs []int) (map[int][]int, error) {
+	if len(programIDs) == 0 {
+		return make(map[int][]int), nil
+	}
+
+	db := r.getDB()
+	// 建立 IN 查詢的佔位符
+	placeholders := make([]string, len(programIDs))
+	args := make([]interface{}, len(programIDs))
+	for i, id := range programIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`SELECT program_id, tag FROM program_tags WHERE program_id IN (%s) ORDER BY program_id, tag`,
+		strings.Join(placeholders, ","))
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	tagsMap := make(map[int][]int)
+	for rows.Next() {
+		var programID int
+		var tag int
+		if err := rows.Scan(&programID, &tag); err != nil {
+			return nil, err
+		}
+		tagsMap[programID] = append(tagsMap[programID], tag)
+	}
+
+	return tagsMap, rows.Err()
 }
 
 // 輔助方法：載入 contents_order

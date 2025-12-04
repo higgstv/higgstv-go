@@ -112,7 +112,9 @@
 - ✅ 統一的測試設定流程
 
 ### 14. 工具更新 ✅
-- ✅ 建立 `cmd/check_database.go` - 統一的資料庫檢查工具
+- ✅ 建立 `cmd/check_database/check_database.go` - 統一的資料庫檢查工具
+- ✅ 建立 `cmd/check_mongodb/check_mongodb.go` - MongoDB 專用檢查工具
+- ✅ 建立 `cmd/migrate/migrate_mongodb_to_sqlite.go` - MongoDB 到 SQLite 遷移工具
 - ✅ 支援 MongoDB 和 SQLite 兩種資料庫
 - ✅ 顯示資料庫特定資訊
 
@@ -238,8 +240,13 @@ internal/
 
 cmd/
 ├── server/
-│   └── main.go               # 主程式（已更新）
-└── check_database.go          # 資料庫檢查工具（新建）
+│   └── main.go                    # 主程式（已更新）
+├── check_database/
+│   └── check_database.go          # 資料庫檢查工具（新建）
+├── check_mongodb/
+│   └── check_mongodb.go           # MongoDB 檢查工具（新建）
+└── migrate/
+    └── migrate_mongodb_to_sqlite.go  # 遷移工具（新建）
 
 tests/
 └── test_helper.go             # 測試輔助（已更新）
